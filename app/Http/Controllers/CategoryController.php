@@ -56,7 +56,7 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): RedirectResponse
     {
         if ($category->is_system) {
-            return back()->withErrors(['category' => 'System categories cannot be modified.']);
+            return back()->with('error', 'System categories cannot be modified.');
         }
 
         if ($category->user_id !== $request->user()->id) {
@@ -87,7 +87,7 @@ class CategoryController extends Controller
         try {
             $category->delete();
         } catch (SystemCategoryException $e) {
-            return back()->withErrors(['category' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
         }
 
         return back()->with('success', 'Category deleted.');

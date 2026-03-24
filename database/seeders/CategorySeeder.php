@@ -15,9 +15,10 @@ class CategorySeeder extends Seeder
     {
         // System default categories (user_id = null → shared across all users)
         $system = [
-            ['name' => 'Bank Transfer', 'type' => 'transfer', 'is_system' => true],
-            ['name' => 'Bank/ATM Fees', 'type' => 'expense',  'is_system' => true],
-            ['name' => 'Adjustment',    'type' => 'expense',  'is_system' => true],
+            ['name' => 'Bank Transfer',  'type' => 'transfer', 'is_system' => true],
+            ['name' => 'Bank/ATM Fees',  'type' => 'expense',  'is_system' => true],
+            ['name' => 'Adjustment',     'type' => 'expense',  'is_system' => true],
+            ['name' => 'Loans & Debts',  'type' => 'expense',  'is_system' => true],
         ];
 
         // Regular starter categories

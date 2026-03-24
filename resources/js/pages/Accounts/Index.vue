@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/vue3';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import InputError from '@/components/InputError.vue';
-import { ArrowLeftRight, Building2, CreditCard, PlusCircle, Wallet } from 'lucide-vue-next';
+import { ArrowLeftRight, Building2, CreditCard, PlusCircle, TrendingUp, Wallet } from 'lucide-vue-next';
 
 interface Account {
     id: number;
@@ -50,8 +50,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Accounts', href: '/accounts' },
 ];
 
+const page = usePage<SharedData>();
+
 const dialogOpen = ref(false);
 const transferOpen = ref(false);
+const incomeOpen = ref(false);
 
 const form = useForm({
     name: '',
@@ -66,6 +69,15 @@ const transferForm = useForm({
     to_account_id: '',
     amount: '',
     fee: '',
+    date: new Date().toISOString().slice(0, 10),
+    note: '',
+});
+
+const incomeForm = useForm({
+    type: 'income',
+    amount: '',
+    category_id: '',
+    to_account_id: '',
     date: new Date().toISOString().slice(0, 10),
     note: '',
 });
@@ -96,6 +108,16 @@ function submitTransfer() {
     });
 }
 
+function submitIncome() {
+    incomeForm.post(route('transactions.store'), {
+        onSuccess: () => {
+            incomeOpen.value = false;
+            incomeForm.reset();
+            incomeForm.date = new Date().toISOString().slice(0, 10);
+        },
+    });
+}
+
 function formatCurrency(value: string | number) {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -118,6 +140,114 @@ function formatCurrency(value: string | number) {
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <!-- Income Dialog -->
+                    <Dialog v-model:open="incomeOpen">
+                        <DialogTrigger as-child>
+                            <Button class="gap-1.5 bg-green-600 text-white hover:bg-green-700" size="sm">
+                                <TrendingUp class="h-4 w-4" />
+                                + Income
+                            </Button>
+                        </DialogTrigger>
+
+                        <DialogContent class="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add Income</DialogTitle>
+                                <DialogDescription>Record income received into one of your accounts.</DialogDescription>
+                            </DialogHeader>
+
+                            <!-- Empty-state warning -->
+                            <div
+                                v-if="page.props.incomeCategories.length === 0 || allAccounts.length === 0"
+                                class="rounded-md bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            >
+                                <span v-if="page.props.incomeCategories.length === 0">
+                                    No income categories yet.
+                                    <a href="/categories" class="underline">Create one first.</a>
+                                </span>
+                                <span v-else>No accounts found. Please create an account first.</span>
+                            </div>
+
+                            <form v-else class="grid gap-4 py-2" @submit.prevent="submitIncome">
+                                <!-- Amount -->
+                                <div class="grid gap-1.5">
+                                    <Label for="inc-amount">Amount</Label>
+                                    <Input
+                                        id="inc-amount"
+                                        v-model="incomeForm.amount"
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        required
+                                    />
+                                    <InputError :message="incomeForm.errors.amount" />
+                                </div>
+
+                                <!-- Category -->
+                                <div class="grid gap-1.5">
+                                    <Label for="inc-category">Category</Label>
+                                    <select
+                                        id="inc-category"
+                                        v-model="incomeForm.category_id"
+                                        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                        required
+                                    >
+                                        <option value="" disabled>Select a category</option>
+                                        <option v-for="cat in page.props.incomeCategories" :key="cat.id" :value="cat.id">
+                                            {{ cat.name }}
+                                        </option>
+                                    </select>
+                                    <InputError :message="incomeForm.errors.category_id" />
+                                </div>
+
+                                <!-- To Account -->
+                                <div class="grid gap-1.5">
+                                    <Label for="inc-account">To Account</Label>
+                                    <select
+                                        id="inc-account"
+                                        v-model="incomeForm.to_account_id"
+                                        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                        required
+                                    >
+                                        <option value="" disabled>Select account</option>
+                                        <option v-for="acc in allAccounts" :key="acc.id" :value="acc.id">
+                                            {{ acc.name }} ({{ formatCurrency(acc.balance) }})
+                                        </option>
+                                    </select>
+                                    <InputError :message="incomeForm.errors.to_account_id" />
+                                </div>
+
+                                <!-- Date -->
+                                <div class="grid gap-1.5">
+                                    <Label for="inc-date">Date</Label>
+                                    <Input id="inc-date" v-model="incomeForm.date" type="date" required />
+                                    <InputError :message="incomeForm.errors.date" />
+                                </div>
+
+                                <!-- Description -->
+                                <div class="grid gap-1.5">
+                                    <Label for="inc-note">
+                                        Description
+                                        <span class="font-normal text-muted-foreground">(optional)</span>
+                                    </Label>
+                                    <Input id="inc-note" v-model="incomeForm.note" placeholder="e.g. Monthly salary" />
+                                    <InputError :message="incomeForm.errors.note" />
+                                </div>
+
+                                <DialogFooter class="pt-2">
+                                    <Button type="button" variant="outline" @click="incomeOpen = false">Cancel</Button>
+                                    <Button
+                                        type="submit"
+                                        class="bg-green-600 text-white hover:bg-green-700"
+                                        :disabled="incomeForm.processing"
+                                    >
+                                        {{ incomeForm.processing ? 'Saving…' : 'Add Income' }}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+
                     <!-- Transfer Dialog -->
                     <Dialog v-model:open="transferOpen">
                         <DialogTrigger as-child>

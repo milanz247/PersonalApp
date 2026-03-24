@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Pencil, Plus, Shield, Trash2 } from 'lucide-vue-next';
+import { AlertTriangle, Pencil, Plus, Shield, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 import { Button } from '@/components/ui/button';
@@ -116,10 +116,22 @@ watch(editOpen, (val) => {
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 const deleteForm = useForm({});
+const deleteConfirmOpen = ref(false);
+const deleteTarget = ref<Category | null>(null);
 
 function deleteCategory(cat: Category) {
-    if (!confirm(`Delete category "${cat.name}"? This cannot be undone.`)) return;
-    deleteForm.delete(route('categories.destroy', { category: cat.id }));
+    deleteTarget.value = cat;
+    deleteConfirmOpen.value = true;
+}
+
+function confirmDelete() {
+    if (!deleteTarget.value) return;
+    deleteForm.delete(route('categories.destroy', { category: deleteTarget.value.id }), {
+        onFinish: () => {
+            deleteConfirmOpen.value = false;
+            deleteTarget.value = null;
+        },
+    });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -359,6 +371,45 @@ const typeBadge: Record<string, string> = {
 
         </div>
     </AppLayout>
+
+    <!-- Delete confirmation dialog -->
+    <Dialog v-model:open="deleteConfirmOpen">
+        <DialogContent class="sm:max-w-sm">
+            <DialogHeader>
+                <DialogTitle class="flex items-center gap-2 text-red-600">
+                    <AlertTriangle class="h-5 w-5" />
+                    Delete Category
+                </DialogTitle>
+            </DialogHeader>
+
+            <div class="py-2">
+                <p class="text-sm text-muted-foreground">
+                    Are you sure you want to delete
+                    <span class="font-semibold text-foreground">"{{ deleteTarget?.name }}"</span>?
+                </p>
+                <p class="mt-1 text-xs text-red-500">This action cannot be undone.</p>
+            </div>
+
+            <DialogFooter class="gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    @click="deleteConfirmOpen = false"
+                    :disabled="deleteForm.processing"
+                >
+                    No, Cancel
+                </Button>
+                <Button
+                    type="button"
+                    variant="destructive"
+                    :disabled="deleteForm.processing"
+                    @click="confirmDelete"
+                >
+                    Yes, Delete
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     <!-- Edit dialog (outside card to avoid nesting issues) -->
     <Dialog v-model:open="editOpen">

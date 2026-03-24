@@ -23,6 +23,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'currency_symbol',
+        'currency_code',
+        'timezone',
+        'date_format',
+        'avatar',
     ];
 
     /**
@@ -61,5 +66,10 @@ class User extends Authenticatable
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function debts(): HasMany
+    {
+        return $this->hasMany(Debt::class);
     }
 }

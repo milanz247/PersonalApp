@@ -2,8 +2,7 @@
 import UserInfo from '@/components/UserInfo.vue';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import type { User } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { BookOpen, Folder } from 'lucide-vue-next';
 
 interface Props {
     user: User;
@@ -20,18 +19,17 @@ defineProps<Props>();
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
-        <DropdownMenuItem :as-child="true">
-            <Link class="block w-full" :href="route('profile.edit')" as="button">
-                <Settings class="mr-2 h-4 w-4" />
-                Settings
-            </Link>
+        <DropdownMenuItem as-child>
+            <a href="https://github.com/laravel/vue-starter-kit" target="_blank" rel="noopener noreferrer" class="flex items-center">
+                <Folder class="mr-2 h-4 w-4" />
+                GitHub Repo
+            </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem as-child>
+            <a href="https://laravel.com/docs/starter-kits" target="_blank" rel="noopener noreferrer" class="flex items-center">
+                <BookOpen class="mr-2 h-4 w-4" />
+                Documentation
+            </a>
         </DropdownMenuItem>
     </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem :as-child="true">
-        <Link class="block w-full" method="post" :href="route('logout')" as="button">
-            <LogOut class="mr-2 h-4 w-4" />
-            Log out
-        </Link>
-    </DropdownMenuItem>
 </template>
