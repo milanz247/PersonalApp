@@ -2,8 +2,8 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useAppearance } from '@/composables/useAppearance';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
-import { CheckCircle2, KeyRound, Palette, SlidersHorizontal, User } from 'lucide-vue-next';
+import { Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { CheckCircle2, HardDrive, KeyRound, Palette, SlidersHorizontal, User } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // ─── Tab navigation ───────────────────────────────────────────────────────────
 
-type TabId = 'profile' | 'preferences' | 'security' | 'appearance';
+type TabId = 'profile' | 'preferences' | 'security' | 'appearance' | 'backup';
 
 const activeTab = ref<TabId>('profile');
 
@@ -35,6 +35,7 @@ const tabs: { id: TabId; label: string; icon: unknown; description: string }[] =
     { id: 'preferences', label: 'Preferences', icon: SlidersHorizontal, description: 'Currency, timezone & format'  },
     { id: 'security',    label: 'Security',    icon: KeyRound,         description: 'Password & account security'  },
     { id: 'appearance',  label: 'Appearance',  icon: Palette,          description: 'Theme & display settings'     },
+    { id: 'backup',      label: 'Backup',      icon: HardDrive,        description: 'Database backup & export'     },
 ];
 
 // ─── Profile form ─────────────────────────────────────────────────────────────
@@ -161,6 +162,17 @@ const appearanceOptions: { value: AppearanceValue; label: string; desc: string }
     { value: 'dark',   label: '🌙 Dark',   desc: 'Easy on the eyes at night.' },
     { value: 'system', label: '💻 System', desc: 'Follows your OS preference.' },
 ];
+
+// ─── Backup ───────────────────────────────────────────────────────────────────
+
+const backupLoading = ref(false);
+
+function runBackup() {
+    backupLoading.value = true;
+    router.post(route('backup.run'), {}, {
+        onFinish: () => { backupLoading.value = false; },
+    });
+}
 </script>
 
 <template>
@@ -498,6 +510,29 @@ const appearanceOptions: { value: AppearanceValue; label: string; desc: string }
                                             Active
                                         </div>
                                     </button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         BACKUP TAB
+                    ══════════════════════════════════════════════════════ -->
+                    <div v-else-if="activeTab === 'backup'">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle class="text-base">Database Backup</CardTitle>
+                                <CardDescription>Create a backup of your database. Backups are stored on the server.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div class="grid gap-4">
+                                    <div class="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                                        This will create a database-only backup using the server's backup system. Backups include all your accounts, transactions, budgets, and settings.
+                                    </div>
+
+                                    <Button @click="runBackup" :disabled="backupLoading">
+                                        {{ backupLoading ? 'Running Backup…' : 'Backup Now' }}
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>

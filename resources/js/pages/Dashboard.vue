@@ -18,6 +18,7 @@ import {
     PieChart,
     Receipt,
     Handshake,
+    AlertTriangle,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
@@ -53,6 +54,13 @@ interface PendingDebt {
     status: string;
 }
 
+interface BudgetAlert {
+    category_name: string;
+    category_color: string | null;
+    budget_amount: number;
+    spent_amount: number;
+}
+
 const props = defineProps<{
     totalBalance: number;
     monthlyIncome: number;
@@ -65,6 +73,7 @@ const props = defineProps<{
     pendingDebts: PendingDebt[];
     totalBorrowed: number;
     totalLent: number;
+    budgetAlerts: BudgetAlert[];
 }>();
 
 const { formatMoney, currencySymbol } = useFormatMoney();
@@ -245,6 +254,32 @@ function isOverdue(date: string | null) {
                     </CardContent>
                 </Card>
             </div>
+
+            <!-- ── Budget Alerts ────────────────────────────────── -->
+            <Card v-if="budgetAlerts.length > 0" class="border-amber-200 dark:border-amber-800">
+                <CardHeader class="flex flex-row items-center gap-2 pb-3">
+                    <AlertTriangle class="h-5 w-5 text-amber-500" />
+                    <CardTitle class="text-base text-amber-700 dark:text-amber-400">Budget Alerts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div class="space-y-2">
+                        <div
+                            v-for="(alert, i) in budgetAlerts"
+                            :key="i"
+                            class="flex items-center justify-between rounded-md bg-amber-50 px-3 py-2 dark:bg-amber-900/20"
+                        >
+                            <div class="flex items-center gap-2">
+                                <span class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: alert.category_color ?? '#6b7280' }" />
+                                <span class="text-sm font-medium">{{ alert.category_name }}</span>
+                            </div>
+                            <span class="text-sm text-amber-700 dark:text-amber-400">
+                                {{ formatMoney(alert.spent_amount) }} / {{ formatMoney(alert.budget_amount) }}
+                                <span class="ml-1 text-xs font-medium">({{ Math.round((alert.spent_amount / alert.budget_amount) * 100) }}%)</span>
+                            </span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <!-- ── Charts Row ───────────────────────────────────── -->
             <div class="grid gap-6 lg:grid-cols-3">

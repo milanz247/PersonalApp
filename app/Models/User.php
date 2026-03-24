@@ -28,6 +28,7 @@ class User extends Authenticatable
         'timezone',
         'date_format',
         'avatar',
+        'last_backup_at',
     ];
 
     /**
@@ -71,5 +72,15 @@ class User extends Authenticatable
     public function debts(): HasMany
     {
         return $this->hasMany(Debt::class);
+    }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
+    public function recurringTransactions(): HasMany
+    {
+        return $this->hasMany(RecurringTransaction::class);
     }
 }

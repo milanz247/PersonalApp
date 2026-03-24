@@ -3,7 +3,7 @@ import NavMain from '@/components/NavMain.vue';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { HandCoins, LayoutGrid, ListOrdered, Settings, Tag, Wallet } from 'lucide-vue-next';
+import { HandCoins, LayoutGrid, ListOrdered, Settings, Tag, Wallet, Target, Repeat, FileBarChart } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -28,9 +28,24 @@ const mainNavItems: NavItem[] = [
         icon: Tag,
     },
     {
+        title: 'Budgets',
+        href: '/budgets',
+        icon: Target,
+    },
+    {
+        title: 'Recurring',
+        href: '/recurring',
+        icon: Repeat,
+    },
+    {
         title: 'Debts & Loans',
         href: '/debts',
         icon: HandCoins,
+    },
+    {
+        title: 'Reports',
+        href: '/reports',
+        icon: FileBarChart,
     },
     {
         title: 'Settings',

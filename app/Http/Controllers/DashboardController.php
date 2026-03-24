@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Budget;
 use App\Models\Debt;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -119,6 +120,28 @@ class DashboardController extends Controller
             ->whereIn('status', ['pending', 'partially_paid'])
             ->sum('remaining_amount');
 
+        // ── Budget alerts (categories over limit) ─────────────────────
+        $currentMonthYear = $now->format('Y-m');
+
+        $budgetAlerts = Budget::where('budgets.user_id', $user->id)
+            ->where('budgets.month_year', $currentMonthYear)
+            ->join('categories', 'budgets.category_id', '=', 'categories.id')
+            ->leftJoin('transactions', function ($join) use ($user, $monthStart, $monthEnd) {
+                $join->on('budgets.category_id', '=', 'transactions.category_id')
+                    ->where('transactions.user_id', '=', $user->id)
+                    ->where('transactions.type', '=', 'expense')
+                    ->whereBetween('transactions.date', [$monthStart, $monthEnd]);
+            })
+            ->groupBy('budgets.id', 'budgets.amount', 'categories.name', 'categories.color')
+            ->select(
+                'categories.name as category_name',
+                'categories.color as category_color',
+                'budgets.amount as budget_amount',
+                DB::raw('COALESCE(SUM(transactions.amount), 0) as spent_amount')
+            )
+            ->havingRaw('spent_amount > budgets.amount')
+            ->get();
+
         return Inertia::render('Dashboard', [
             'totalBalance'       => round((float) $totalBalance, 2),
             'monthlyIncome'      => round((float) $monthlyIncome, 2),
@@ -131,6 +154,7 @@ class DashboardController extends Controller
             'pendingDebts'       => $pendingDebts,
             'totalBorrowed'      => round((float) $totalBorrowed, 2),
             'totalLent'          => round((float) $totalLent, 2),
+            'budgetAlerts'       => $budgetAlerts,
         ]);
     }
 }
