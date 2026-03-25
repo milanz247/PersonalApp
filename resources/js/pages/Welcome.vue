@@ -12,37 +12,32 @@ const user = page.props.auth?.user;
 
     <div class="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
 
-        <header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-                <span class="text-sm font-semibold tracking-tight text-zinc-800 dark:text-zinc-100">
-                    Finance Suite
-                </span>
-                <nav class="flex items-center gap-3">
-                    <template v-if="user">
-                        <Link :href="route('dashboard')">
-                            <Button size="sm" variant="outline">Dashboard</Button>
-                        </Link>
-                    </template>
-                    <template v-else>
-                        <Link :href="route('login')">
-                            <Button size="sm" variant="ghost">Log in</Button>
-                        </Link>
-                        <Link :href="route('register')">
-                            <Button size="sm">Register</Button>
-                        </Link>
-                    </template>
-                </nav>
-            </div>
-        </header>
-
         <main class="flex flex-1 flex-col items-center justify-center px-6 py-16">
             <div class="mb-12 text-center">
+                <p class="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    Welcome to Milan's Personal Finance Manager
+                </p>
                 <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
                     Financial Control Center
                 </h1>
                 <p class="mt-4 max-w-xl text-base text-zinc-500 dark:text-zinc-400">
                     One place to track your daily finances and grow your long-term wealth.
                 </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <template v-if="user">
+                        <Link :href="route('dashboard')">
+                            <Button>Go to Dashboard</Button>
+                        </Link>
+                    </template>
+                    <template v-else>
+                        <Link :href="route('login')">
+                            <Button variant="outline">Log in</Button>
+                        </Link>
+                        <Link :href="route('register')">
+                            <Button>Get Started</Button>
+                        </Link>
+                    </template>
+                </div>
             </div>
 
             <div class="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
