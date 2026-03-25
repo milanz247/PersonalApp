@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
+use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,5 +60,62 @@ class AccountController extends Controller
 
         return redirect()->route('accounts.index')
             ->with('success', 'Bank account added successfully.');
+    }
+
+    /**
+     * Update the specified bank account (name and bank details only).
+     * Balance is managed via transactions and transfers, not direct edits.
+     */
+    public function update(Request $request, Account $account): RedirectResponse
+    {
+        if ($account->type === 'wallet') {
+            abort(403, 'The main wallet cannot be modified through this endpoint.');
+        }
+
+        if ($account->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name'           => ['required', 'string', 'max:255'],
+            'bank_name'      => ['required', 'string', 'max:255'],
+            'branch_name'    => ['required', 'string', 'max:255'],
+            'account_number' => ['required', 'string', 'max:255'],
+        ]);
+
+        $account->update($validated);
+
+        return redirect()->route('accounts.index')
+            ->with('success', 'Bank account updated successfully.');
+    }
+
+    /**
+     * Delete a bank account.
+     * Blocks deletion of the wallet and accounts with existing transactions.
+     */
+    public function destroy(Request $request, Account $account): RedirectResponse
+    {
+        if ($account->type === 'wallet') {
+            abort(403, 'The main wallet cannot be deleted.');
+        }
+
+        if ($account->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $hasTransactions = Transaction::where('from_account_id', $account->id)
+            ->orWhere('to_account_id', $account->id)
+            ->exists();
+
+        if ($hasTransactions) {
+            return back()->withErrors([
+                'account' => 'This account has existing transactions and cannot be deleted.',
+            ]);
+        }
+
+        $account->delete();
+
+        return redirect()->route('accounts.index')
+            ->with('success', 'Bank account deleted successfully.');
     }
 }

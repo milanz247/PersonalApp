@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import InputError from '@/components/InputError.vue';
-import { ArrowLeftRight, Building2, PlusCircle, TrendingUp, Wallet } from 'lucide-vue-next';
+import { ArrowLeftRight, Building2, Ellipsis, Pencil, PlusCircle, Trash2, TrendingUp, Wallet } from 'lucide-vue-next';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Account {
     id: number;
@@ -55,6 +71,9 @@ const page = usePage<SharedData>();
 const dialogOpen = ref(false);
 const transferOpen = ref(false);
 const incomeOpen = ref(false);
+const editOpen = ref(false);
+const deleteOpen = ref(false);
+const targetAccount = ref<Account | null>(null);
 
 const form = useForm({
     name: '',
@@ -80,6 +99,13 @@ const incomeForm = useForm({
     to_account_id: '',
     date: new Date().toISOString().slice(0, 10),
     note: '',
+});
+
+const editForm = useForm({
+    name: '',
+    bank_name: '',
+    branch_name: '',
+    account_number: '',
 });
 
 // Show the balance of the selected source account inside the transfer modal
@@ -123,6 +149,44 @@ function formatCurrency(value: string | number) {
         style: 'currency',
         currency: 'USD',
     }).format(Number(value));
+}
+
+function openEdit(account: Account) {
+    targetAccount.value = account;
+    editForm.name = account.name;
+    editForm.bank_name = account.bank_name ?? '';
+    editForm.branch_name = account.branch_name ?? '';
+    editForm.account_number = account.account_number ?? '';
+    editOpen.value = true;
+}
+
+function submitEdit() {
+    if (!targetAccount.value) return;
+    editForm.put(route('accounts.update', { account: targetAccount.value.id }), {
+        onSuccess: () => {
+            editOpen.value = false;
+            editForm.reset();
+            targetAccount.value = null;
+        },
+    });
+}
+
+function openDelete(account: Account) {
+    targetAccount.value = account;
+    deleteOpen.value = true;
+}
+
+function confirmDelete() {
+    if (!targetAccount.value) return;
+    router.delete(route('accounts.destroy', { account: targetAccount.value.id }), {
+        onSuccess: () => {
+            deleteOpen.value = false;
+            targetAccount.value = null;
+        },
+        onError: () => {
+            deleteOpen.value = false;
+        },
+    });
 }
 </script>
 
@@ -536,11 +600,34 @@ function formatCurrency(value: string | number) {
                                 <CardTitle class="text-base font-bold">{{ account.name }}</CardTitle>
                                 <CardDescription class="text-xs text-zinc-500 dark:text-zinc-400">{{ account.bank_name ?? 'Bank Account' }}</CardDescription>
                             </div>
-                            <!-- Bank initials badge -->
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <span class="text-sm font-bold uppercase">
-                                    {{ (account.bank_name ?? account.name).slice(0, 2) }}
-                                </span>
+                            <div class="flex items-center gap-1.5">
+                                <!-- Bank initials badge -->
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <span class="text-sm font-bold uppercase">
+                                        {{ (account.bank_name ?? account.name).slice(0, 2) }}
+                                    </span>
+                                </div>
+                                <!-- Actions dropdown -->
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger as-child>
+                                        <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-muted-foreground">
+                                            <Ellipsis class="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem @click="openEdit(account)">
+                                            <Pencil class="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            class="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                                            @click="openDelete(account)"
+                                        >
+                                            <Trash2 class="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </CardHeader>
                         <CardContent class="space-y-1">
@@ -564,4 +651,75 @@ function formatCurrency(value: string | number) {
 
         </div>
     </AppLayout>
+
+    <!-- ─── Edit Bank Account Dialog ──────────────────────────────── -->
+    <Dialog v-model:open="editOpen">
+        <DialogContent class="max-w-[95vw] sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Edit Bank Account</DialogTitle>
+                <DialogDescription>Update the details for "{{ targetAccount?.name }}".</DialogDescription>
+            </DialogHeader>
+
+            <form class="grid gap-4 py-2" @submit.prevent="submitEdit">
+                <div class="grid gap-1.5">
+                    <Label for="edit-name">Account Label</Label>
+                    <Input id="edit-name" v-model="editForm.name" placeholder="e.g. My Savings Account" autocomplete="off" />
+                    <InputError :message="editForm.errors.name" />
+                </div>
+
+                <div class="grid gap-1.5">
+                    <Label for="edit-bank_name">Bank Name</Label>
+                    <Input id="edit-bank_name" v-model="editForm.bank_name" placeholder="e.g. National Bank" autocomplete="off" />
+                    <InputError :message="editForm.errors.bank_name" />
+                </div>
+
+                <div class="grid gap-1.5">
+                    <Label for="edit-branch_name">Branch Name</Label>
+                    <Input id="edit-branch_name" v-model="editForm.branch_name" placeholder="e.g. Downtown Branch" autocomplete="off" />
+                    <InputError :message="editForm.errors.branch_name" />
+                </div>
+
+                <div class="grid gap-1.5">
+                    <Label for="edit-account_number">Account Number</Label>
+                    <Input id="edit-account_number" v-model="editForm.account_number" placeholder="e.g. 1234567890" autocomplete="off" />
+                    <InputError :message="editForm.errors.account_number" />
+                </div>
+
+                <DialogFooter class="pt-2">
+                    <Button type="button" variant="outline" @click="editOpen = false">Cancel</Button>
+                    <Button type="submit" :disabled="editForm.processing">
+                        {{ editForm.processing ? 'Saving\u2026' : 'Save Changes' }}
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─── Delete Bank Account AlertDialog ──────────────────────── -->
+    <AlertDialog v-model:open="deleteOpen">
+        <AlertDialogContent class="max-w-[95vw] sm:max-w-md">
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{{ targetAccount?.name }}"?</AlertDialogTitle>
+                <AlertDialogDescription as="div">
+                    <span>This action <strong>cannot be undone</strong>. The account record will be permanently removed.</span>
+                    <span
+                        v-if="targetAccount && Number(targetAccount.balance) > 0"
+                        class="mt-2 block rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                    >
+                        &#x26A0; This account currently holds <strong>{{ formatCurrency(targetAccount.balance) }}</strong>.
+                        Deleting it will remove this amount from your tracked total balance.
+                    </span>
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                    class="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
+                    @click="confirmDelete"
+                >
+                    Delete Account
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>
