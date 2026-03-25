@@ -51,7 +51,7 @@ interface Debt {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-const props = defineProps<{
+const { debts, totalOwed, totalReceivable } = defineProps<{
     debts: Debt[];
     totalOwed: number;
     totalReceivable: number;

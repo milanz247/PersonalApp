@@ -32,10 +32,6 @@ function addToast(props: Omit<Toast, 'id'>) {
     return id;
 }
 
-function updateToast(id: string, props: Partial<Toast>) {
-    toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...props } : t));
-}
-
 function dismissToast(id: string) {
     toasts.value = toasts.value.map((t) =>
         t.id === id ? { ...t, open: false } : t,

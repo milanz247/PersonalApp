@@ -107,14 +107,6 @@ function amountDisplay(tx: Transaction): { text: string; class: string } {
     return { text: formatted, class: 'text-blue-600 dark:text-blue-400 font-semibold' };
 }
 
-/** Description column — for transfers show "A → B", for others show note or category */
-function description(tx: Transaction): string {
-    if (tx.type === 'transfer' && tx.from_account && tx.to_account) {
-        return `${tx.from_account.name} → ${tx.to_account.name}`;
-    }
-    return tx.note ?? tx.category?.name ?? '—';
-}
-
 /** Badge classes per transaction type */
 const badgeClass: Record<string, string> = {
     income:   'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
@@ -293,7 +285,7 @@ function executeDelete() {
                                     :variant="link.active ? 'default' : 'outline'"
                                     class="h-8 min-w-8 px-2 text-xs"
                                 >
-                                    <Link :href="link.url" v-html="link.label" />
+                                    <Link :href="link.url"><span v-html="link.label" /></Link>
                                 </Button>
                                 <Button
                                     v-else
@@ -301,8 +293,7 @@ function executeDelete() {
                                     variant="outline"
                                     disabled
                                     class="h-8 min-w-8 px-2 text-xs opacity-40"
-                                    v-html="link.label"
-                                />
+                                ><span v-html="link.label" /></Button>
                             </template>
                         </div>
                     </div>

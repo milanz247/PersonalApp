@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type AccountOption, type BreadcrumbItem, type CategoryOption, type SharedData } from '@/types';
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import {
-    Repeat, Plus, Play, Trash2, CalendarDays, Pause, CirclePlay,
+    Repeat, Plus, Trash2, CalendarDays, CirclePlay,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -38,7 +38,7 @@ interface RecurringItem {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-const props = defineProps<{
+const { recurringTransactions } = defineProps<{
     recurringTransactions: RecurringItem[];
 }>();
 

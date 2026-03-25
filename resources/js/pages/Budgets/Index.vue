@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { type BreadcrumbItem } from '@/types';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import { Target, ChevronLeft, ChevronRight, Pencil } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
