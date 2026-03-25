@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
     Route::post('transactions', [TransactionController::class, 'store'])->name('transactions.store');
+    Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');

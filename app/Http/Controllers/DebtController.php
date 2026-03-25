@@ -71,6 +71,19 @@ class DebtController extends Controller
             $bankFeesCategory = Category::where('name', 'Bank/ATM Fees')->whereNull('user_id')->first();
             $debtCategory     = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
 
+            // Create the debt record first so we can link transactions via debt_id
+            $debt = Debt::create([
+                'user_id'          => $user->id,
+                'account_id'       => $account->id,
+                'person_name'      => $validated['person_name'],
+                'type'             => $validated['type'],
+                'amount'           => $amount,
+                'remaining_amount' => $amount,
+                'due_date'         => $validated['due_date'] ?? null,
+                'status'           => 'pending',
+                'description'      => $validated['description'] ?? null,
+            ]);
+
             if ($isBorrow) {
                 // Borrowing: money comes INTO the account
                 $account->increment('balance', $amount);
@@ -79,6 +92,7 @@ class DebtController extends Controller
                     'user_id'       => $user->id,
                     'to_account_id' => $account->id,
                     'category_id'   => $debtCategory?->id,
+                    'debt_id'       => $debt->id,
                     'type'          => 'income',
                     'amount'        => $amount,
                     'fee'           => 0,
@@ -94,6 +108,7 @@ class DebtController extends Controller
                     'user_id'         => $user->id,
                     'from_account_id' => $account->id,
                     'category_id'     => $debtCategory?->id,
+                    'debt_id'         => $debt->id,
                     'type'            => 'expense',
                     'amount'          => $amount,
                     'fee'             => 0,
@@ -107,6 +122,7 @@ class DebtController extends Controller
                         'user_id'         => $user->id,
                         'from_account_id' => $account->id,
                         'category_id'     => $bankFeesCategory?->id,
+                        'debt_id'         => $debt->id,
                         'type'            => 'expense',
                         'amount'          => $fee,
                         'fee'             => 0,
@@ -115,18 +131,6 @@ class DebtController extends Controller
                     ]);
                 }
             }
-
-            Debt::create([
-                'user_id'          => $user->id,
-                'account_id'       => $account->id,
-                'person_name'      => $validated['person_name'],
-                'type'             => $validated['type'],
-                'amount'           => $amount,
-                'remaining_amount' => $amount,
-                'due_date'         => $validated['due_date'] ?? null,
-                'status'           => 'pending',
-                'description'      => $validated['description'] ?? null,
-            ]);
         });
 
         $label = $isBorrow ? 'Debt (borrowed)' : 'Loan (lent)';
@@ -180,6 +184,7 @@ class DebtController extends Controller
                     'user_id'         => $user->id,
                     'from_account_id' => $account->id,
                     'category_id'     => $debtCategory?->id,
+                    'debt_id'         => $debt->id,
                     'type'            => 'expense',
                     'amount'          => $payment,
                     'fee'             => 0,
@@ -194,6 +199,7 @@ class DebtController extends Controller
                     'user_id'       => $user->id,
                     'to_account_id' => $account->id,
                     'category_id'   => $debtCategory?->id,
+                    'debt_id'       => $debt->id,
                     'type'          => 'income',
                     'amount'        => $payment,
                     'fee'           => 0,

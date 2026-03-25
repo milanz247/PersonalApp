@@ -4,14 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaction extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'user_id',
         'from_account_id',
         'to_account_id',
         'category_id',
+        'debt_id',
         'type',
         'amount',
         'fee',
@@ -43,5 +47,10 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function debt(): BelongsTo
+    {
+        return $this->belongsTo(Debt::class);
     }
 }

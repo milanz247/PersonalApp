@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight } from 'lucide-vue-next';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowRight, Trash2 } from 'lucide-vue-next';
+import { useToast } from '@/composables/useToast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +41,7 @@ interface Transaction {
     fee: string;
     date: string;
     note: string | null;
+    debt_id: number | null;
     from_account: AccountRef | null;
     to_account: AccountRef | null;
     category: CategoryRef | null;
@@ -108,6 +121,32 @@ const badgeClass: Record<string, string> = {
     expense:  'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
     transfer: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
 };
+
+// ─── Delete logic ─────────────────────────────────────────────────────────────
+
+const { toast } = useToast();
+const showDeleteDialog = ref(false);
+const deletingTx = ref<Transaction | null>(null);
+
+function confirmDelete(tx: Transaction) {
+    deletingTx.value = tx;
+    showDeleteDialog.value = true;
+}
+
+function executeDelete() {
+    if (!deletingTx.value) return;
+
+    router.delete(`/transactions/${deletingTx.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast({ title: 'Deleted', description: 'Transaction deleted and balance reversed.' });
+        },
+        onFinish: () => {
+            showDeleteDialog.value = false;
+            deletingTx.value = null;
+        },
+    });
+}
 </script>
 
 <template>
@@ -155,6 +194,7 @@ const badgeClass: Record<string, string> = {
                                     <th class="px-4 py-3">From / To</th>
                                     <th class="px-4 py-3 text-right">Amount</th>
                                     <th class="px-4 py-3 text-right">Fee</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
@@ -219,6 +259,18 @@ const badgeClass: Record<string, string> = {
                                     <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums text-muted-foreground">
                                         {{ Number(tx.fee) > 0 ? formatCurrency(tx.fee) : '—' }}
                                     </td>
+
+                                    <!-- Actions -->
+                                    <td class="whitespace-nowrap px-4 py-3 text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            @click="confirmDelete(tx)"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </Button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -259,5 +311,31 @@ const badgeClass: Record<string, string> = {
             </Card>
 
         </div>
+
+        <!-- Delete confirmation dialog -->
+        <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        <template v-if="deletingTx?.debt_id">
+                            This transaction is linked to a debt/loan record. Deleting it will also revert your debt record and reverse the balance change on the associated account(s). This action cannot be undone.
+                        </template>
+                        <template v-else>
+                            Are you sure you want to delete this transaction? This will reverse the balance change on the associated account(s). This action cannot be undone.
+                        </template>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        @click="executeDelete"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </AppLayout>
 </template>
