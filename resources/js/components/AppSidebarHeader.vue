@@ -104,10 +104,17 @@ function submitExpense() {
         <div class="flex items-center gap-4">
 
              <Dialog v-model:open="expenseOpen">
+            <!-- Desktop: full text button -->
             <DialogTrigger as-child>
-                <Button variant="destructive" size="sm" class="gap-1.5">
+                <Button variant="destructive" size="sm" class="hidden gap-1.5 md:flex">
                     <MinusCircle class="h-4 w-4" />
                     + Expense
+                </Button>
+            </DialogTrigger>
+            <!-- Mobile: icon-only button -->
+            <DialogTrigger as-child>
+                <Button variant="destructive" size="icon" class="h-8 w-8 md:hidden">
+                    <MinusCircle class="h-4 w-4" />
                 </Button>
             </DialogTrigger>
 

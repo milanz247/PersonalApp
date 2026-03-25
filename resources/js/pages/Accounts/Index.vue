@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import InputError from '@/components/InputError.vue';
-import { ArrowLeftRight, Building2, CreditCard, PlusCircle, TrendingUp, Wallet } from 'lucide-vue-next';
+import { ArrowLeftRight, Building2, PlusCircle, TrendingUp, Wallet } from 'lucide-vue-next';
 
 interface Account {
     id: number;
@@ -133,17 +133,17 @@ function formatCurrency(value: string | number) {
         <div class="flex flex-1 flex-col gap-6 p-4 md:p-6">
 
             <!-- Page Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">Accounts</h1>
-                    <p class="text-muted-foreground text-sm">Manage your wallet and bank accounts.</p>
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400">Manage your wallet and bank accounts.</p>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                     <!-- Income Dialog -->
                     <Dialog v-model:open="incomeOpen">
                         <DialogTrigger as-child>
-                            <Button class="gap-1.5 bg-green-600 text-white hover:bg-green-700" size="sm">
+                            <Button class="w-full gap-1.5 bg-green-600 text-white hover:bg-green-700 sm:w-auto" size="sm">
                                 <TrendingUp class="h-4 w-4" />
                                 + Income
                             </Button>
@@ -251,8 +251,8 @@ function formatCurrency(value: string | number) {
                     <!-- Transfer Dialog -->
                     <Dialog v-model:open="transferOpen">
                         <DialogTrigger as-child>
-                            <Button variant="outline">
-                                <ArrowLeftRight class="mr-2 h-4 w-4" />
+                            <Button class="w-full gap-1.5 sm:w-auto" size="sm" variant="outline">
+                                <ArrowLeftRight class="h-4 w-4" />
                                 Transfer
                             </Button>
                         </DialogTrigger>
@@ -381,8 +381,8 @@ function formatCurrency(value: string | number) {
                     <!-- Add Bank Account Dialog Trigger -->
                     <Dialog v-model:open="dialogOpen">
                         <DialogTrigger as-child>
-                            <Button>
-                                <PlusCircle class="mr-2 h-4 w-4" />
+                            <Button class="col-span-2 w-full gap-1.5 sm:w-auto" size="sm">
+                                <PlusCircle class="h-4 w-4" />
                                 Add Bank Account
                             </Button>
                         </DialogTrigger>
@@ -478,7 +478,7 @@ function formatCurrency(value: string | number) {
 
             <!-- Main Wallet Card -->
             <div>
-                <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                     Main Wallet
                 </h2>
                 <Card
@@ -506,8 +506,8 @@ function formatCurrency(value: string | number) {
             </div>
 
             <!-- Bank Accounts Section -->
-            <div>
-                <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+            <div class="mt-2">
+                <h2 class="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                     Bank Accounts
                 </h2>
 
@@ -529,27 +529,32 @@ function formatCurrency(value: string | number) {
                     <Card
                         v-for="account in bankAccounts"
                         :key="account.id"
-                        class="transition-shadow hover:shadow-md"
+                        class="rounded-xl shadow-sm transition-shadow hover:shadow-md"
                     >
                         <CardHeader class="flex flex-row items-start justify-between pb-2">
-                            <div class="space-y-0.5">
-                                <CardTitle class="text-base">{{ account.name }}</CardTitle>
-                                <CardDescription>{{ account.bank_name }}</CardDescription>
+                            <div class="space-y-1">
+                                <CardTitle class="text-base font-bold">{{ account.name }}</CardTitle>
+                                <CardDescription class="text-xs text-zinc-500 dark:text-zinc-400">{{ account.bank_name ?? 'Bank Account' }}</CardDescription>
                             </div>
-                            <CreditCard class="h-5 w-5 text-muted-foreground" />
+                            <!-- Bank initials badge -->
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <span class="text-sm font-bold uppercase">
+                                    {{ (account.bank_name ?? account.name).slice(0, 2) }}
+                                </span>
+                            </div>
                         </CardHeader>
                         <CardContent class="space-y-1">
-                            <p class="text-2xl font-bold">
+                            <p class="text-2xl font-bold tracking-tight">
                                 {{ formatCurrency(account.balance) }}
                             </p>
-                            <div class="space-y-0.5 pt-2 text-xs text-muted-foreground">
+                            <div class="space-y-1 pt-2 text-xs">
                                 <p>
-                                    <span class="font-medium">Branch:</span>
-                                    {{ account.branch_name ?? '—' }}
+                                    <span class="font-semibold text-foreground">Branch: </span>
+                                    <span class="text-zinc-500 dark:text-zinc-400">{{ account.branch_name ?? '—' }}</span>
                                 </p>
                                 <p>
-                                    <span class="font-medium">Account No:</span>
-                                    {{ account.account_number ?? '—' }}
+                                    <span class="font-semibold text-foreground">Acc No: </span>
+                                    <span class="font-mono text-zinc-500 dark:text-zinc-400">{{ account.account_number ?? '—' }}</span>
                                 </p>
                             </div>
                         </CardContent>
