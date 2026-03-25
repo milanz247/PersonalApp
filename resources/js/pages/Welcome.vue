@@ -91,7 +91,7 @@ const pillars = [
 </script>
 
 <template>
-    <Head title="Personal HQ"   >
+    <Head title="Personal HQ" />
 
     <div class="relative min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-50">
 
