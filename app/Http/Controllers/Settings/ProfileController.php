@@ -32,7 +32,7 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return back()->with('success', 'Profile updated successfully.');
+        return to_route('profile.edit')->with('success', 'Profile updated successfully.');
     }
 
     public function updateSettings(Request $request): RedirectResponse
