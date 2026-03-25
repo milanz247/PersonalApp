@@ -174,8 +174,51 @@ function executeDelete() {
                         <p class="text-sm">No transactions yet.</p>
                     </div>
 
-                    <!-- Table -->
-                    <div v-else class="overflow-x-auto">
+                    <template v-else>
+                    <!-- Mobile card list (< md) -->
+                    <div class="flex flex-col gap-3 p-4 md:hidden">
+                        <div
+                            v-for="tx in transactions.data"
+                            :key="'m-' + tx.id"
+                            class="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm"
+                        >
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <span
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
+                                    :class="badgeClass[tx.type]"
+                                >
+                                    {{ tx.type.charAt(0).toUpperCase() }}
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">
+                                        <template v-if="tx.type === 'transfer' && tx.from_account && tx.to_account">
+                                            {{ tx.from_account.name }} → {{ tx.to_account.name }}
+                                        </template>
+                                        <template v-else>{{ tx.category?.name ?? tx.note ?? 'Transaction' }}</template>
+                                    </p>
+                                    <p class="truncate text-xs text-muted-foreground">
+                                        {{ tx.from_account?.name ?? tx.to_account?.name ?? '' }} · {{ formatDate(tx.date) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-2">
+                                <span class="text-sm font-semibold tabular-nums" :class="amountDisplay(tx).class">
+                                    {{ amountDisplay(tx).text }}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    @click="confirmDelete(tx)"
+                                >
+                                    <Trash2 class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop table (>= md) -->
+                    <div class="hidden overflow-x-auto md:block">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -267,6 +310,7 @@ function executeDelete() {
                             </tbody>
                         </table>
                     </div>
+                    </template>
 
                     <!-- Pagination -->
                     <div

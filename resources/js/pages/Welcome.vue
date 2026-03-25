@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Wallet, Landmark, TrendingUp, Archive, Gem, ArrowRight, ShieldCheck } from 'lucide-vue-next';
+import { Wallet, TrendingUp, Archive, Gem, ArrowRight, ShieldCheck } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 
@@ -40,7 +40,7 @@ const formattedDate = computed(() => {
 const greeting = computed(() => {
     const hour = currentTime.value.getHours();
     let timeGreeting = '';
-    
+
     if (hour < 12) timeGreeting = 'Good Morning';
     else if (hour < 18) timeGreeting = 'Good Afternoon';
     else timeGreeting = 'Good Evening';
@@ -91,14 +91,15 @@ const pillars = [
 </script>
 
 <template>
-    <Head title="Personal HQ" />
+    <Head title="Personal HQ"   >
 
     <div class="relative min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-50">
-        
+
         <div class="absolute inset-0 bg-[url('https://res.cloudinary.com/dzvy8pwws/image/upload/v1714041793/noise_dypnpe.png')] opacity-[0.03] dark:opacity-[0.05] pointer-events-none"></div>
         <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
-        
+
         <div class="absolute right-6 top-6 z-10">
+            <template v-if="!user">
                 <div class="flex items-center gap-3">
                     <Link :href="route('login')">
                         <Button variant="ghost" size="sm" class="text-zinc-600 dark:text-zinc-400">
@@ -121,7 +122,7 @@ const pillars = [
         </div>
 
         <div class="relative z-10 mx-auto flex max-w-7xl flex-col items-center justify-center px-6 py-20 min-h-screen">
-            
+
             <div class="flex flex-col items-center justify-center mb-16 text-center">
                 <div class="mb-6 inline-flex flex-col items-center justify-center">
                     <p class="text-sm font-medium tracking-widest text-zinc-500 dark:text-zinc-400 uppercase">
@@ -141,15 +142,15 @@ const pillars = [
             </div>
 
             <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                
+
                 <div
                     v-for="pillar in pillars"
                     :key="pillar.id"
                     class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200 bg-white/60 p-6 text-left shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800/50 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:shadow-black/50"
                 >
                     <div>
-                        <div 
-                            class="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110" 
+                        <div
+                            class="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                             :class="pillar.bgBg"
                         >
                             <component :is="pillar.icon" class="h-6 w-6" :class="pillar.colorUrl" />
@@ -167,12 +168,12 @@ const pillars = [
                             :href="user ? route(pillar.route) : route('login')"
                             class="inline-block w-full"
                         >
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 class="w-full justify-between bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
                             >
                                 <span v-if="user" class="flex items-center gap-2">
-                                    Quick Access 
+                                    Quick Access
                                 </span>
                                 <span v-else class="flex items-center gap-2">
                                     <ShieldCheck class="h-4 w-4" />
