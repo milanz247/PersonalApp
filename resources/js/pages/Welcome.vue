@@ -1,95 +1,196 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Wallet, Landmark } from 'lucide-vue-next';
+import { Wallet, Landmark, TrendingUp, Archive, Gem, ArrowRight, ShieldCheck } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 const page = usePage();
 const user = page.props.auth?.user;
+
+// ─── CLOCK & GREETING LOGIC ─────────────────────────────────────
+const currentTime = ref(new Date());
+let timer: ReturnType<typeof setInterval>;
+
+onMounted(() => {
+    timer = setInterval(() => {
+        currentTime.value = new Date();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    clearInterval(timer);
+});
+
+const formattedTime = computed(() => {
+    return currentTime.value.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    });
+});
+
+const formattedDate = computed(() => {
+    return currentTime.value.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+    });
+});
+
+const greeting = computed(() => {
+    const hour = currentTime.value.getHours();
+    let timeGreeting = '';
+    
+    if (hour < 12) timeGreeting = 'Good Morning';
+    else if (hour < 18) timeGreeting = 'Good Afternoon';
+    else timeGreeting = 'Good Evening';
+
+    const name = user?.name ? user.name.split(' ')[0] : 'Milan';
+    return `${timeGreeting}, ${name}`;
+});
+
+// ─── BENTO GRID DATA ──────────────────────────────────────────
+const pillars = [
+    {
+        id: 'finance',
+        title: 'Finance Tracker',
+        description: 'Track expenses, manage accounts, and set monthly budgets.',
+        icon: Wallet,
+        colorUrl: 'text-blue-600 dark:text-blue-400',
+        bgBg: 'bg-blue-100/50 dark:bg-blue-900/30',
+        route: 'dashboard',
+    },
+    {
+        id: 'forex',
+        title: 'Forex Trading Hub',
+        description: 'Log trades, analyze performance, and track P/L metrics.',
+        icon: TrendingUp,
+        colorUrl: 'text-violet-600 dark:text-violet-400',
+        bgBg: 'bg-violet-100/50 dark:bg-violet-900/30',
+        route: 'dashboard', // Update when true route is ready
+    },
+    {
+        id: 'assets',
+        title: 'Asset Manager',
+        description: 'Monitor long-term wealth, vehicles, property, and gold.',
+        icon: Gem,
+        colorUrl: 'text-emerald-600 dark:text-emerald-400',
+        bgBg: 'bg-emerald-100/50 dark:bg-emerald-900/30',
+        route: 'dashboard', // Update when true route is ready
+    },
+    {
+        id: 'vault',
+        title: 'Knowledge Vault',
+        description: 'Securely store personal documents, important links, and private notes.',
+        icon: Archive,
+        colorUrl: 'text-amber-600 dark:text-amber-400',
+        bgBg: 'bg-amber-100/50 dark:bg-amber-900/30',
+        route: 'dashboard', // Update when true route is ready
+    }
+];
 </script>
+
 <template>
-    <Head title="Personal Finance Suite" />
+    <Head title="Personal HQ" />
 
-    <div class="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-
-        <main class="flex flex-1 flex-col items-center justify-center px-6 py-16">
-            <div class="mb-12 text-center">
-                <p class="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    Welcome to Milan's Personal Finance Manager
-                </p>
-                <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
-                    Financial Control Center
-                </h1>
-                <p class="mt-4 max-w-xl text-base text-zinc-500 dark:text-zinc-400">
-                    One place to track your daily finances and grow your long-term wealth.
-                </p>
-                <div class="mt-6 flex items-center justify-center gap-3">
-                    <template v-if="user">
-                        <Link :href="route('dashboard')">
-                            <Button>Go to Dashboard</Button>
-                        </Link>
-                    </template>
-                    <template v-else>
-                        <Link :href="route('login')">
-                            <Button variant="outline">Log in</Button>
-                        </Link>
-                        <Link :href="route('register')">
-                            <Button>Get Started</Button>
-                        </Link>
-                    </template>
+    <div class="relative min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-50">
+        
+        <div class="absolute inset-0 bg-[url('https://res.cloudinary.com/dzvy8pwws/image/upload/v1714041793/noise_dypnpe.png')] opacity-[0.03] dark:opacity-[0.05] pointer-events-none"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+        
+        <div class="absolute right-6 top-6 z-10">
+                <div class="flex items-center gap-3">
+                    <Link :href="route('login')">
+                        <Button variant="ghost" size="sm" class="text-zinc-600 dark:text-zinc-400">
+                            Sign In
+                        </Button>
+                    </Link>
+                    <Link :href="route('register')">
+                        <Button size="sm" class="shadow-sm">Get Started</Button>
+                    </Link>
                 </div>
+            </template>
+            <template v-else>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                        <div class="h-2 w-2 rounded-full bg-green-500"></div>
+                        <span class="text-xs font-medium text-zinc-600 dark:text-zinc-300">HQ Online</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="relative z-10 mx-auto flex max-w-7xl flex-col items-center justify-center px-6 py-20 min-h-screen">
+            
+            <div class="flex flex-col items-center justify-center mb-16 text-center">
+                <div class="mb-6 inline-flex flex-col items-center justify-center">
+                    <p class="text-sm font-medium tracking-widest text-zinc-500 dark:text-zinc-400 uppercase">
+                        {{ formattedDate }}
+                    </p>
+                    <h2 class="mt-1 text-4xl font-light tracking-tight text-zinc-900 dark:text-zinc-100 tabular-nums">
+                        {{ formattedTime }}
+                    </h2>
+                </div>
+
+                <h1 class="text-5xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-6xl lg:text-7xl">
+                    {{ greeting }}
+                </h1>
+                <p class="mt-6 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+                    Welcome to your Personal Operating System. Control your wealth, track your trading edge, and secure your knowledge.
+                </p>
             </div>
 
-            <div class="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
-
-                <Card class="flex flex-col border-zinc-200 shadow-sm dark:border-zinc-800">
-                    <CardHeader class="pb-4">
-                        <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950">
-                            <Wallet class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                
+                <div
+                    v-for="pillar in pillars"
+                    :key="pillar.id"
+                    class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200 bg-white/60 p-6 text-left shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800/50 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:shadow-black/50"
+                >
+                    <div>
+                        <div 
+                            class="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110" 
+                            :class="pillar.bgBg"
+                        >
+                            <component :is="pillar.icon" class="h-6 w-6" :class="pillar.colorUrl" />
                         </div>
-                        <CardTitle class="text-lg">Expense &amp; Income Tracker</CardTitle>
-                        <CardDescription class="text-sm text-zinc-500 dark:text-zinc-400">
-                            Manage your daily spending, set budgets, and view detailed financial reports.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="flex-1" />
-                    <CardFooter>
-                        <Link :href="user ? route('dashboard') : route('login')" class="w-full">
-                            <Button class="w-full">
-                                {{ user ? 'Go to Dashboard' : 'Login to Start' }}
+                        <h3 class="mb-2 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            {{ pillar.title }}
+                        </h3>
+                        <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                            {{ pillar.description }}
+                        </p>
+                    </div>
+
+                    <div class="mt-8">
+                        <Link
+                            :href="user ? route(pillar.route) : route('login')"
+                            class="inline-block w-full"
+                        >
+                            <Button 
+                                variant="outline" 
+                                class="w-full justify-between bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                            >
+                                <span v-if="user" class="flex items-center gap-2">
+                                    Quick Access 
+                                </span>
+                                <span v-else class="flex items-center gap-2">
+                                    <ShieldCheck class="h-4 w-4" />
+                                    Secure Login
+                                </span>
+                                <ArrowRight class="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
                             </Button>
                         </Link>
-                    </CardFooter>
-                </Card>
-
-                <Card class="flex flex-col border-zinc-200 shadow-sm dark:border-zinc-800">
-                    <CardHeader class="pb-4">
-                        <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950">
-                            <Landmark class="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <CardTitle class="text-lg">Net Worth &amp; Asset Manager</CardTitle>
-                        <CardDescription class="text-sm text-zinc-500 dark:text-zinc-400">
-                            Track your long-term wealth including property, vehicles, gold, and investments.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="flex-1" />
-                    <CardFooter>
-                        <Link :href="user ? route('dashboard') : route('login')" class="w-full">
-                            <Button class="w-full" variant="outline">
-                                {{ user ? 'Manage Assets' : 'Login to Access' }}
-                            </Button>
-                        </Link>
-                    </CardFooter>
-                </Card>
+                    </div>
+                </div>
 
             </div>
-        </main>
 
-        <footer class="border-t border-zinc-200 py-6 dark:border-zinc-800">
-            <p class="text-center text-xs text-zinc-400 dark:text-zinc-600">
-                &copy; {{ new Date().getFullYear() }} Personal Finance Suite. All rights reserved.
-            </p>
-        </footer>
-
+            <div class="mt-20 text-center opacity-60 hover:opacity-100 transition-opacity">
+                <p class="text-xs font-medium text-zinc-500 dark:text-zinc-500 tracking-wider uppercase">
+                    Personal HQ System &copy; {{ new Date().getFullYear() }}
+                </p>
+            </div>
+        </div>
     </div>
 </template>
