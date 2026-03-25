@@ -103,24 +103,7 @@ function submitExpense() {
         <!-- Right: clock + quick actions -->
         <div class="flex items-center gap-4">
 
-            <!-- Live date/time (hidden on mobile) -->
-            <div class="hidden flex-col items-end gap-0.5 md:flex">
-                <span class="text-muted-foreground text-xs">{{ currentDate }}</span>
-                <span class="font-mono text-sm tabular-nums leading-none">{{ currentTime }}</span>
-            </div>
-
-            <!-- Logout icon (no label) -->
-            <Link
-                method="post"
-                :href="route('logout')"
-                as="button"
-                class="text-muted-foreground hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
-                title="Sign out"
-            >
-                <LogOut class="h-4 w-4" />
-            </Link>
-
-        <Dialog v-model:open="expenseOpen">
+             <Dialog v-model:open="expenseOpen">
             <DialogTrigger as-child>
                 <Button variant="destructive" size="sm" class="gap-1.5">
                     <MinusCircle class="h-4 w-4" />
@@ -222,6 +205,24 @@ function submitExpense() {
                 </form>
             </DialogContent>
         </Dialog>
+            <!-- Live date/time (hidden on mobile) -->
+            <div class="hidden flex-col items-end gap-0.5 md:flex">
+                <span class="text-muted-foreground text-xs">{{ currentDate }}</span>
+                <span class="font-mono text-sm tabular-nums leading-none">{{ currentTime }}</span>
+            </div>
+
+            <!-- Logout icon (no label) -->
+            <Link
+                method="post"
+                :href="route('logout')"
+                as="button"
+                class="text-muted-foreground hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                title="Sign out"
+            >
+                <LogOut class="h-4 w-4" />
+            </Link>
+
+
 
         </div>
     </header>

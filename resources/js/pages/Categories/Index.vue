@@ -165,7 +165,7 @@ const typeBadge: Record<string, string> = {
                         </Button>
                     </DialogTrigger>
 
-                    <DialogContent class="sm:max-w-md">
+                    <DialogContent class="max-w-[95vw] sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>New Category</DialogTitle>
                         </DialogHeader>
@@ -276,95 +276,141 @@ const typeBadge: Record<string, string> = {
                         <p class="text-sm">No categories yet. Create one above.</p>
                     </div>
 
-                    <!-- Table -->
-                    <div v-else class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    <th class="px-4 py-3">Color</th>
-                                    <th class="px-4 py-3">Name</th>
-                                    <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Icon</th>
-                                    <th class="px-4 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                <tr
-                                    v-for="cat in categories"
-                                    :key="cat.id"
-                                    class="transition-colors hover:bg-muted/30"
-                                >
-                                    <!-- Color dot -->
-                                    <td class="px-4 py-3">
-                                        <span
-                                            class="inline-block h-4 w-4 rounded-full border"
-                                            :style="cat.color ? { backgroundColor: cat.color } : {}"
-                                            :class="!cat.color ? 'bg-muted' : ''"
-                                        />
-                                    </td>
+                    <!-- Mobile Cards -->
+                    <template v-else>
+                        <div class="divide-y md:hidden">
+                            <div
+                                v-for="cat in categories"
+                                :key="'m-' + cat.id"
+                                class="flex items-center gap-3 px-4 py-3"
+                            >
+                                <!-- Color dot -->
+                                <span
+                                    class="inline-block h-4 w-4 shrink-0 rounded-full border"
+                                    :style="cat.color ? { backgroundColor: cat.color } : {}"
+                                    :class="!cat.color ? 'bg-muted' : ''"
+                                />
 
-                                    <!-- Name + system badge -->
-                                    <td class="px-4 py-3 font-medium">
-                                        <span class="flex items-center gap-2">
-                                            {{ cat.name }}
-                                            <span
-                                                v-if="cat.is_system"
-                                                class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                                            >
-                                                <Shield class="h-2.5 w-2.5" />
-                                                system
-                                            </span>
+                                <!-- Info -->
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="truncate text-sm font-medium">{{ cat.name }}</span>
+                                        <span
+                                            v-if="cat.is_system"
+                                            class="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                        >
+                                            <Shield class="h-2.5 w-2.5" />
+                                            system
                                         </span>
-                                    </td>
-
-                                    <!-- Type badge -->
-                                    <td class="px-4 py-3">
+                                    </div>
+                                    <div class="mt-0.5 flex items-center gap-2">
                                         <span
-                                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                                            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
                                             :class="typeBadge[cat.type]"
                                         >
                                             {{ cat.type }}
                                         </span>
-                                    </td>
+                                        <span v-if="cat.icon" class="font-mono text-xs text-muted-foreground">{{ cat.icon }}</span>
+                                    </div>
+                                </div>
 
-                                    <!-- Icon name -->
-                                    <td class="px-4 py-3 font-mono text-xs text-muted-foreground">
-                                        {{ cat.icon ?? '—' }}
-                                    </td>
+                                <!-- Actions -->
+                                <div v-if="!cat.is_system" class="flex shrink-0 items-center gap-1">
+                                    <Button size="icon" variant="ghost" class="h-8 w-8" title="Edit" @click="openEdit(cat)">
+                                        <Pencil class="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        class="h-8 w-8 text-destructive hover:text-destructive"
+                                        title="Delete"
+                                        :disabled="deleteForm.processing"
+                                        @click="deleteCategory(cat)"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
 
-                                    <!-- Actions -->
-                                    <td class="px-4 py-3 text-right">
-                                        <div class="inline-flex items-center gap-1">
-                                            <!-- Edit (only user-owned) -->
-                                            <Button
-                                                v-if="!cat.is_system"
-                                                size="icon"
-                                                variant="ghost"
-                                                class="h-8 w-8"
-                                                title="Edit"
-                                                @click="openEdit(cat)"
+                        <!-- Desktop Table -->
+                        <div class="hidden overflow-x-auto md:block">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <th class="px-4 py-3">Color</th>
+                                        <th class="px-4 py-3">Name</th>
+                                        <th class="px-4 py-3">Type</th>
+                                        <th class="hidden px-4 py-3 lg:table-cell">Icon</th>
+                                        <th class="px-4 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    <tr
+                                        v-for="cat in categories"
+                                        :key="cat.id"
+                                        class="transition-colors hover:bg-muted/30"
+                                    >
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-block h-4 w-4 rounded-full border"
+                                                :style="cat.color ? { backgroundColor: cat.color } : {}"
+                                                :class="!cat.color ? 'bg-muted' : ''"
+                                            />
+                                        </td>
+                                        <td class="px-4 py-3 font-medium">
+                                            <span class="flex items-center gap-2">
+                                                {{ cat.name }}
+                                                <span
+                                                    v-if="cat.is_system"
+                                                    class="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                                >
+                                                    <Shield class="h-2.5 w-2.5" />
+                                                    system
+                                                </span>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span
+                                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                                                :class="typeBadge[cat.type]"
                                             >
-                                                <Pencil class="h-4 w-4" />
-                                            </Button>
-
-                                            <!-- Delete (only user-owned) -->
-                                            <Button
-                                                v-if="!cat.is_system"
-                                                size="icon"
-                                                variant="ghost"
-                                                class="h-8 w-8 text-destructive hover:text-destructive"
-                                                title="Delete"
-                                                :disabled="deleteForm.processing"
-                                                @click="deleteCategory(cat)"
-                                            >
-                                                <Trash2 class="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                                {{ cat.type }}
+                                            </span>
+                                        </td>
+                                        <td class="hidden px-4 py-3 font-mono text-xs text-muted-foreground lg:table-cell">
+                                            {{ cat.icon ?? '—' }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <div class="inline-flex items-center gap-1">
+                                                <Button
+                                                    v-if="!cat.is_system"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    class="h-8 w-8"
+                                                    title="Edit"
+                                                    @click="openEdit(cat)"
+                                                >
+                                                    <Pencil class="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    v-if="!cat.is_system"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    class="h-8 w-8 text-destructive hover:text-destructive"
+                                                    title="Delete"
+                                                    :disabled="deleteForm.processing"
+                                                    @click="deleteCategory(cat)"
+                                                >
+                                                    <Trash2 class="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
 
                 </CardContent>
             </Card>
@@ -374,7 +420,7 @@ const typeBadge: Record<string, string> = {
 
     <!-- Delete confirmation dialog -->
     <Dialog v-model:open="deleteConfirmOpen">
-        <DialogContent class="sm:max-w-sm">
+        <DialogContent class="max-w-[95vw] sm:max-w-sm">
             <DialogHeader>
                 <DialogTitle class="flex items-center gap-2 text-red-600">
                     <AlertTriangle class="h-5 w-5" />
@@ -413,7 +459,7 @@ const typeBadge: Record<string, string> = {
 
     <!-- Edit dialog (outside card to avoid nesting issues) -->
     <Dialog v-model:open="editOpen">
-        <DialogContent class="sm:max-w-md">
+        <DialogContent class="max-w-[95vw] sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Edit Category</DialogTitle>
             </DialogHeader>

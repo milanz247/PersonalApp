@@ -225,7 +225,7 @@ function isOverdue(d: string | null): boolean {
                         </Button>
                     </DialogTrigger>
 
-                    <DialogContent class="sm:max-w-lg">
+                    <DialogContent class="max-w-[95vw] sm:max-w-lg">
                         <DialogHeader>
                             <DialogTitle class="flex items-center gap-2">
                                 <HandCoins class="h-5 w-5" />
@@ -424,16 +424,73 @@ function isOverdue(d: string | null): boolean {
                         <p class="text-sm">No debts or loans recorded yet.</p>
                     </div>
 
-                    <div v-else class="overflow-x-auto">
+                    <template v-else>
+                    <!-- Mobile card list (< md) -->
+                    <div class="flex flex-col gap-3 p-4 md:hidden">
+                        <div
+                            v-for="debt in debts"
+                            :key="'m-' + debt.id"
+                            class="rounded-xl border bg-card p-4 shadow-sm"
+                            :class="debt.status === 'settled' ? 'opacity-60' : ''"
+                        >
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <span
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
+                                        :class="debt.type === 'borrowed'
+                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
+                                    >
+                                        <ArrowDownLeft v-if="debt.type === 'borrowed'" class="h-4 w-4" />
+                                        <ArrowUpRight v-else class="h-4 w-4" />
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-medium">{{ debt.person_name }}</p>
+                                        <p class="truncate text-xs text-muted-foreground">
+                                            {{ debt.type === 'borrowed' ? 'Borrowed' : 'Lent' }} · {{ debt.account.name }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <p class="text-sm font-bold tabular-nums" :class="debt.status === 'settled' ? 'text-green-600 dark:text-green-400' : ''">
+                                        Rs. {{ fmt(debt.remaining_amount) }}
+                                    </p>
+                                    <span
+                                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                        :class="statusBadge[debt.status]"
+                                    >
+                                        {{ statusLabel[debt.status] }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-if="debt.due_date && debt.status !== 'settled'" class="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                                <CalendarDays class="h-3 w-3" />
+                                <span :class="isOverdue(debt.due_date) ? 'text-red-600 dark:text-red-400 font-semibold' : isDueSoon(debt.due_date) ? 'text-yellow-600 dark:text-yellow-400' : ''">
+                                    {{ formatDate(debt.due_date) }}
+                                    <template v-if="isOverdue(debt.due_date)"> (Overdue)</template>
+                                    <template v-else-if="isDueSoon(debt.due_date)"> (Soon)</template>
+                                </span>
+                            </div>
+                            <div v-if="debt.status !== 'settled'" class="mt-3">
+                                <Button size="sm" variant="outline" class="h-8 w-full gap-1 text-xs" @click="openPayment(debt)">
+                                    <Plus class="h-3 w-3" />
+                                    Add Payment
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop table (>= md) -->
+                    <div class="hidden overflow-x-auto md:block">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     <th class="px-4 py-3">Person</th>
                                     <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Account</th>
-                                    <th class="px-4 py-3 text-right">Amount</th>
+                                    <th class="hidden px-4 py-3 lg:table-cell">Account</th>
+                                    <th class="hidden px-4 py-3 text-right lg:table-cell">Amount</th>
                                     <th class="px-4 py-3 text-right">Remaining</th>
-                                    <th class="px-4 py-3">Due</th>
+                                    <th class="hidden px-4 py-3 lg:table-cell">Due</th>
                                     <th class="px-4 py-3">Status</th>
                                     <th class="px-4 py-3 text-right">Actions</th>
                                 </tr>
@@ -445,10 +502,7 @@ function isOverdue(d: string | null): boolean {
                                     class="transition-colors hover:bg-muted/30"
                                     :class="debt.status === 'settled' ? 'opacity-60' : ''"
                                 >
-                                    <!-- Person -->
                                     <td class="px-4 py-3 font-medium">{{ debt.person_name }}</td>
-
-                                    <!-- Type badge -->
                                     <td class="px-4 py-3">
                                         <span
                                             class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -457,45 +511,29 @@ function isOverdue(d: string | null): boolean {
                                                 : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
                                         >
                                             <ArrowDownLeft v-if="debt.type === 'borrowed'" class="h-3 w-3" />
-                                            <ArrowUpRight  v-else                           class="h-3 w-3" />
+                                            <ArrowUpRight v-else class="h-3 w-3" />
                                             {{ debt.type === 'borrowed' ? 'Borrowed' : 'Lent' }}
                                         </span>
                                     </td>
-
-                                    <!-- Account -->
-                                    <td class="text-muted-foreground px-4 py-3">
+                                    <td class="hidden text-muted-foreground px-4 py-3 lg:table-cell">
                                         <span class="flex items-center gap-1.5">
                                             <Wallet class="h-3.5 w-3.5" />
                                             {{ debt.account.name }}
                                         </span>
                                     </td>
-
-                                    <!-- Original amount -->
-                                    <td class="px-4 py-3 text-right font-mono">
+                                    <td class="hidden px-4 py-3 text-right font-mono lg:table-cell">
                                         Rs. {{ fmt(debt.amount) }}
                                     </td>
-
-                                    <!-- Remaining amount -->
                                     <td class="px-4 py-3 text-right font-mono">
-                                        <span
-                                            :class="debt.status === 'settled'
-                                                ? 'text-green-600 dark:text-green-400'
-                                                : 'font-semibold'"
-                                        >
+                                        <span :class="debt.status === 'settled' ? 'text-green-600 dark:text-green-400' : 'font-semibold'">
                                             Rs. {{ fmt(debt.remaining_amount) }}
                                         </span>
                                     </td>
-
-                                    <!-- Due date -->
-                                    <td class="px-4 py-3">
+                                    <td class="hidden px-4 py-3 lg:table-cell">
                                         <span
                                             v-if="debt.due_date && debt.status !== 'settled'"
                                             class="inline-flex items-center gap-1 text-xs"
-                                            :class="isOverdue(debt.due_date)
-                                                ? 'text-red-600 dark:text-red-400 font-semibold'
-                                                : isDueSoon(debt.due_date)
-                                                ? 'text-yellow-600 dark:text-yellow-400'
-                                                : 'text-muted-foreground'"
+                                            :class="isOverdue(debt.due_date) ? 'text-red-600 dark:text-red-400 font-semibold' : isDueSoon(debt.due_date) ? 'text-yellow-600 dark:text-yellow-400' : 'text-muted-foreground'"
                                         >
                                             <CalendarDays class="h-3 w-3" />
                                             {{ formatDate(debt.due_date) }}
@@ -504,8 +542,6 @@ function isOverdue(d: string | null): boolean {
                                         </span>
                                         <span v-else class="text-muted-foreground text-xs">{{ formatDate(debt.due_date) }}</span>
                                     </td>
-
-                                    <!-- Status -->
                                     <td class="px-4 py-3">
                                         <span
                                             class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -514,8 +550,6 @@ function isOverdue(d: string | null): boolean {
                                             {{ statusLabel[debt.status] }}
                                         </span>
                                     </td>
-
-                                    <!-- Actions -->
                                     <td class="px-4 py-3 text-right">
                                         <Button
                                             v-if="debt.status !== 'settled'"
@@ -533,6 +567,7 @@ function isOverdue(d: string | null): boolean {
                             </tbody>
                         </table>
                     </div>
+                    </template>
                 </CardContent>
             </Card>
 
@@ -541,7 +576,7 @@ function isOverdue(d: string | null): boolean {
 
     <!-- ─── Add Payment Dialog ────────────────────────────────────────────────── -->
     <Dialog v-model:open="paymentOpen">
-        <DialogContent class="sm:max-w-sm">
+        <DialogContent class="max-w-[95vw] sm:max-w-sm">
             <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
                     <HandCoins class="h-5 w-5" />

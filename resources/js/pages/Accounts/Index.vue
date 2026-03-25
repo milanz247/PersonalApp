@@ -149,7 +149,7 @@ function formatCurrency(value: string | number) {
                             </Button>
                         </DialogTrigger>
 
-                        <DialogContent class="sm:max-w-md">
+                        <DialogContent class="max-w-[95vw] sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add Income</DialogTitle>
                                 <DialogDescription>Record income received into one of your accounts.</DialogDescription>
@@ -257,7 +257,7 @@ function formatCurrency(value: string | number) {
                             </Button>
                         </DialogTrigger>
 
-                        <DialogContent class="sm:max-w-md">
+                        <DialogContent class="max-w-[95vw] sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Internal Transfer</DialogTitle>
                                 <DialogDescription>
@@ -387,7 +387,7 @@ function formatCurrency(value: string | number) {
                             </Button>
                         </DialogTrigger>
 
-                    <DialogContent class="sm:max-w-md">
+                    <DialogContent class="max-w-[95vw] sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Add Bank Account</DialogTitle>
                             <DialogDescription>

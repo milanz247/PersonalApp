@@ -259,7 +259,7 @@ function getStatusColor(item: BudgetItem): string {
 
         <!-- Set Budget Dialog -->
         <Dialog v-model:open="dialogOpen">
-            <DialogContent class="sm:max-w-md">
+            <DialogContent class="max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>
                         {{ editingItem?.budget_amount ? 'Edit' : 'Set' }} Budget — {{ editingItem?.category_name }}

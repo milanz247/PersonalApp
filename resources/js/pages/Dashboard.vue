@@ -123,6 +123,18 @@ const barOptions = computed(() => ({
     legend: { position: 'top' as const },
     grid: { borderColor: 'rgba(128,128,128,0.15)' },
     theme: { mode: document.documentElement.classList.contains('dark') ? 'dark' as const : 'light' as const },
+    responsive: [
+        {
+            breakpoint: 640,
+            options: {
+                chart: { height: 260 },
+                plotOptions: { bar: { columnWidth: '80%' } },
+                xaxis: { labels: { rotate: -60, style: { fontSize: '8px' } }, tickAmount: 6 },
+                yaxis: { labels: { formatter: (v: number) => `${(v / 1000).toFixed(0)}k` } },
+                legend: { fontSize: '11px' },
+            },
+        },
+    ],
 }));
 
 const barSeries = computed(() => [
@@ -169,6 +181,16 @@ const donutOptions = computed(() => ({
     },
     legend: { position: 'bottom' as const },
     theme: { mode: document.documentElement.classList.contains('dark') ? 'dark' as const : 'light' as const },
+    responsive: [
+        {
+            breakpoint: 640,
+            options: {
+                chart: { height: 280 },
+                plotOptions: { pie: { donut: { size: '50%' } } },
+                legend: { fontSize: '11px', position: 'bottom' as const },
+            },
+        },
+    ],
 }));
 
 const donutSeries = computed(() => props.categoryBreakdown.map((c) => Number(c.total)));

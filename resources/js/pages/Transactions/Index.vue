@@ -224,11 +224,11 @@ function executeDelete() {
                                 <tr class="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     <th class="px-4 py-3">Date</th>
                                     <th class="px-4 py-3">Description</th>
-                                    <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Category</th>
-                                    <th class="px-4 py-3">From / To</th>
+                                    <th class="hidden px-4 py-3 lg:table-cell">Type</th>
+                                    <th class="hidden px-4 py-3 lg:table-cell">Category</th>
+                                    <th class="hidden px-4 py-3 xl:table-cell">From / To</th>
                                     <th class="px-4 py-3 text-right">Amount</th>
-                                    <th class="px-4 py-3 text-right">Fee</th>
+                                    <th class="hidden px-4 py-3 text-right lg:table-cell">Fee</th>
                                     <th class="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -254,7 +254,7 @@ function executeDelete() {
                                     </td>
 
                                     <!-- Type badge -->
-                                    <td class="px-4 py-3">
+                                    <td class="hidden px-4 py-3 lg:table-cell">
                                         <span
                                             class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
                                             :class="badgeClass[tx.type]"
@@ -264,7 +264,7 @@ function executeDelete() {
                                     </td>
 
                                     <!-- Category -->
-                                    <td class="px-4 py-3">
+                                    <td class="hidden px-4 py-3 lg:table-cell">
                                         <span class="flex items-center gap-1.5">
                                             <span
                                                 v-if="tx.category?.color"
@@ -276,7 +276,7 @@ function executeDelete() {
                                     </td>
 
                                     <!-- From / To accounts -->
-                                    <td class="px-4 py-3 text-muted-foreground">
+                                    <td class="hidden px-4 py-3 text-muted-foreground xl:table-cell">
                                         <span v-if="tx.type !== 'transfer'">
                                             {{ tx.from_account?.name ?? tx.to_account?.name ?? '—' }}
                                         </span>
@@ -291,7 +291,7 @@ function executeDelete() {
                                     </td>
 
                                     <!-- Fee -->
-                                    <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums text-muted-foreground">
+                                    <td class="hidden whitespace-nowrap px-4 py-3 text-right tabular-nums text-muted-foreground lg:table-cell">
                                         {{ Number(tx.fee) > 0 ? formatCurrency(tx.fee) : '—' }}
                                     </td>
 
@@ -349,7 +349,7 @@ function executeDelete() {
 
         <!-- Delete confirmation dialog -->
         <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
-            <AlertDialogContent>
+            <AlertDialogContent class="max-w-[95vw] sm:max-w-lg">
                 <AlertDialogHeader>
                     <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
                     <AlertDialogDescription>

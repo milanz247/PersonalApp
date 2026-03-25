@@ -151,7 +151,7 @@ function formatDate(d: string | null): string {
                         </Button>
                     </DialogTrigger>
 
-                    <DialogContent class="sm:max-w-lg">
+                    <DialogContent class="max-w-[95vw] sm:max-w-lg">
                         <DialogHeader>
                             <DialogTitle>New Recurring Transaction</DialogTitle>
                         </DialogHeader>
