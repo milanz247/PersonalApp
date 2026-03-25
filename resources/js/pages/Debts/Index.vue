@@ -124,6 +124,7 @@ const paymentTarget = ref<Debt | null>(null);
 const paymentForm = useForm({
     payment_amount: '',
     account_id:     '',
+    fee:            '',
 });
 
 const paymentAccountBalance = computed(() => {
@@ -132,10 +133,17 @@ const paymentAccountBalance = computed(() => {
     return acc ? Number.parseFloat(acc.balance) : null;
 });
 
+// Total that will leave/arrive at the account (payment + fee)
+const paymentTotalDeduction = computed(() => {
+    const amt = Number.parseFloat(paymentForm.payment_amount) || 0;
+    const fee = Number.parseFloat(paymentForm.fee) || 0;
+    return amt + fee;
+});
+
 const paymentInsufficient = computed(() => {
     if (!paymentTarget.value || paymentTarget.value.type !== 'borrowed') return false;
     if (paymentAccountBalance.value === null) return false;
-    return Number.parseFloat(paymentForm.payment_amount) > paymentAccountBalance.value;
+    return paymentTotalDeduction.value > paymentAccountBalance.value;
 });
 
 const paymentExceedsRemaining = computed(() => {
@@ -576,7 +584,7 @@ function isOverdue(d: string | null): boolean {
 
     <!-- ─── Add Payment Dialog ────────────────────────────────────────────────── -->
     <Dialog v-model:open="paymentOpen">
-        <DialogContent class="max-w-[95vw] sm:max-w-sm">
+        <DialogContent class="max-w-[95vw] sm:max-w-md">
             <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
                     <HandCoins class="h-5 w-5" />
@@ -595,31 +603,64 @@ function isOverdue(d: string | null): boolean {
                 </p>
                 <p class="text-muted-foreground mt-0.5 text-xs">
                     {{ paymentTarget.type === 'borrowed'
-                        ? 'You are repaying this debt. Amount will be deducted from your account.'
+                        ? 'You are repaying this debt. Amount + fee will be deducted from your account.'
                         : 'You are receiving a repayment. Amount will be added to your account.' }}
                 </p>
             </div>
 
             <form @submit.prevent="submitPayment" class="grid gap-4">
-                <!-- Payment amount -->
-                <div class="grid gap-1.5">
-                    <Label for="p-amount">Payment Amount (Rs.)</Label>
-                    <Input
-                        id="p-amount"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        v-model="paymentForm.payment_amount"
-                        placeholder="0.00"
-                        required
-                    />
-                    <p v-if="paymentExceedsRemaining" class="text-destructive text-xs">
-                        Payment exceeds remaining amount of Rs. {{ fmt(paymentTarget?.remaining_amount ?? 0) }}.
-                    </p>
-                    <p v-if="paymentInsufficient" class="text-destructive text-xs">
-                        Insufficient balance in selected account.
-                    </p>
-                    <p v-if="paymentForm.errors.payment_amount" class="text-destructive text-xs">{{ paymentForm.errors.payment_amount }}</p>
+                <!-- Payment amount + Fee side by side -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="grid gap-1.5">
+                        <Label for="p-amount">Payment (Rs.)</Label>
+                        <Input
+                            id="p-amount"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            v-model="paymentForm.payment_amount"
+                            placeholder="0.00"
+                            required
+                        />
+                        <p v-if="paymentExceedsRemaining" class="text-destructive text-xs">
+                            Exceeds remaining Rs. {{ fmt(paymentTarget?.remaining_amount ?? 0) }}.
+                        </p>
+                        <p v-if="paymentForm.errors.payment_amount" class="text-destructive text-xs">{{ paymentForm.errors.payment_amount }}</p>
+                    </div>
+
+                    <div class="grid gap-1.5">
+                        <Label for="p-fee">
+                            Bank Fee (Rs.)
+                            <span class="font-normal text-muted-foreground">(opt.)</span>
+                        </Label>
+                        <Input
+                            id="p-fee"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            v-model="paymentForm.fee"
+                            placeholder="0.00"
+                        />
+                        <p v-if="paymentForm.errors.fee" class="text-destructive text-xs">{{ paymentForm.errors.fee }}</p>
+                    </div>
+                </div>
+
+                <!-- Total Deduction Banner -->
+                <div
+                    v-if="paymentTotalDeduction > 0"
+                    class="flex items-center justify-between rounded-lg border px-4 py-3 text-sm font-medium"
+                    :class="paymentInsufficient
+                        ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300'
+                        : 'border-primary/20 bg-primary/5 text-foreground'"
+                >
+                    <span>
+                        <template v-if="paymentInsufficient">⚠ Insufficient balance</template>
+                        <template v-else-if="paymentTarget?.type === 'borrowed'">Total to be deducted</template>
+                        <template v-else>Net amount received</template>
+                    </span>
+                    <span class="text-base font-bold tabular-nums">
+                        Rs. {{ paymentTotalDeduction.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </span>
                 </div>
 
                 <!-- Account selection -->
@@ -636,6 +677,9 @@ function isOverdue(d: string | null): boolean {
                             {{ acc.name }} — Rs. {{ fmt(acc.balance) }}
                         </option>
                     </select>
+                    <p v-if="paymentInsufficient && paymentTarget?.type === 'borrowed'" class="text-destructive text-xs">
+                        Insufficient balance. Need Rs. {{ paymentTotalDeduction.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}, available Rs. {{ fmt(paymentAccountBalance ?? 0) }}.
+                    </p>
                     <p v-if="paymentForm.errors.account_id" class="text-destructive text-xs">{{ paymentForm.errors.account_id }}</p>
                 </div>
 
@@ -654,7 +698,7 @@ function isOverdue(d: string | null): boolean {
                         type="submit"
                         :disabled="paymentForm.processing || paymentExceedsRemaining || paymentInsufficient"
                     >
-                        Confirm Payment
+                        {{ paymentForm.processing ? 'Processing…' : 'Confirm Payment' }}
                     </Button>
                 </DialogFooter>
             </form>

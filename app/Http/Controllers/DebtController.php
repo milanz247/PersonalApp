@@ -149,11 +149,13 @@ class DebtController extends Controller
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0.01'],
             'account_id'     => ['required', 'integer', 'exists:accounts,id'],
+            'fee'            => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $user          = $request->user();
-        $payment       = (float) $validated['payment_amount'];
-        $remaining     = (float) $debt->remaining_amount;
+        $user      = $request->user();
+        $payment   = (float) $validated['payment_amount'];
+        $fee       = (float) ($validated['fee'] ?? 0);
+        $remaining = (float) $debt->remaining_amount;
 
         if ($debt->status === 'settled') {
             return back()->with('error', 'This debt is already settled.');
@@ -167,19 +169,23 @@ class DebtController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // For lent debts: someone is paying us back → balance increases
-        // For borrowed debts: we are paying back → balance decreases
-        if ($debt->type === 'borrowed' && (float) $account->balance < $payment) {
-            return back()->withErrors(['payment_amount' => "Insufficient balance to make this payment."]);
+        // For borrowed debts: we are paying back → total deduction must not exceed balance
+        if ($debt->type === 'borrowed') {
+            $totalDeduct = $payment + $fee;
+            if ((float) $account->balance < $totalDeduct) {
+                return back()->withErrors(['payment_amount' => "Insufficient balance. Available: {$account->balance}, Required: {$totalDeduct} (payment + fee)."]);
+            }
         }
 
-        DB::transaction(function () use ($user, $debt, $account, $payment) {
-            $debtCategory = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
+        DB::transaction(function () use ($user, $debt, $account, $payment, $fee) {
+            $debtCategory     = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
+            $bankFeesCategory = Category::where('name', 'Bank/ATM Fees')->whereNull('user_id')->first();
 
             if ($debt->type === 'borrowed') {
-                // We are paying someone back → money leaves our account
-                $account->decrement('balance', $payment);
+                // We are paying someone back → payment + fee leave our account
+                $account->decrement('balance', $payment + $fee);
 
+                // Main repayment transaction
                 Transaction::create([
                     'user_id'         => $user->id,
                     'from_account_id' => $account->id,
@@ -189,10 +195,25 @@ class DebtController extends Controller
                     'amount'          => $payment,
                     'fee'             => 0,
                     'date'            => now()->toDateString(),
-                    'note'            => 'Repayment to ' . $debt->person_name,
+                    'note'            => 'Debt repayment to ' . $debt->person_name,
                 ]);
+
+                // Separate fee transaction (only if fee > 0)
+                if ($fee > 0) {
+                    Transaction::create([
+                        'user_id'         => $user->id,
+                        'from_account_id' => $account->id,
+                        'category_id'     => $bankFeesCategory?->id,
+                        'debt_id'         => $debt->id,
+                        'type'            => 'expense',
+                        'amount'          => $fee,
+                        'fee'             => 0,
+                        'date'            => now()->toDateString(),
+                        'note'            => 'Transaction fee for debt repayment to ' . $debt->person_name,
+                    ]);
+                }
             } else {
-                // Someone is paying us back → money comes into our account
+                // Someone is paying us back → money comes into our account (no fee deduction on received payment)
                 $account->increment('balance', $payment);
 
                 Transaction::create([
@@ -206,6 +227,23 @@ class DebtController extends Controller
                     'date'          => now()->toDateString(),
                     'note'          => 'Loan repayment from ' . $debt->person_name,
                 ]);
+
+                // Fee for receiving (e.g. bank charge for incoming transfer)
+                if ($fee > 0) {
+                    $account->decrement('balance', $fee);
+
+                    Transaction::create([
+                        'user_id'         => $user->id,
+                        'from_account_id' => $account->id,
+                        'category_id'     => $bankFeesCategory?->id,
+                        'debt_id'         => $debt->id,
+                        'type'            => 'expense',
+                        'amount'          => $fee,
+                        'fee'             => 0,
+                        'date'            => now()->toDateString(),
+                        'note'            => 'Transaction fee for loan repayment from ' . $debt->person_name,
+                    ]);
+                }
             }
 
             $debt->remaining_amount = (float) $debt->remaining_amount - $payment;
