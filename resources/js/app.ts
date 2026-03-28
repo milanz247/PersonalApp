@@ -6,6 +6,9 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { initializeTheme } from './composables/useAppearance';
+import { registerSW } from 'virtual:pwa-register';
+
+registerSW({ immediate: true });
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {

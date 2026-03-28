@@ -10,7 +10,11 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="Personal HQ">
         <link rel="apple-touch-icon" href="/icons/icon-192x192.svg">
-        <link rel="manifest" href="/manifest.webmanifest">
+        @if (file_exists(public_path('build/manifest.webmanifest')))
+            <link rel="manifest" href="/build/manifest.webmanifest">
+        @else
+            <link rel="manifest" href="/manifest.webmanifest">
+        @endif
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

@@ -21,7 +21,15 @@ export default defineConfig({
             },
         }),
         VitePWA({
+            outDir: 'public',
+            buildBase: '/',
             registerType: 'autoUpdate',
+            injectRegister: null,
+            workbox: {
+                navigateFallback: null,
+                globDirectory: 'public',
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+            },
             manifest: {
                 name: 'Personal HQ',
                 short_name: 'PHQ',
