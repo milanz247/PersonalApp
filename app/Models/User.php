@@ -32,6 +32,10 @@ class User extends Authenticatable
         'telegram_bot_token',
         'telegram_chat_id',
         'telegram_webhook_secret',
+        'debt_auto_send_initial',
+        'debt_reminder_days_before',
+        'debt_initial_message',
+        'debt_reminder_message',
     ];
 
     /**
@@ -45,6 +49,8 @@ class User extends Authenticatable
         'telegram_bot_token',
         'telegram_chat_id',
         'telegram_webhook_secret',
+        'debt_initial_message',
+        'debt_reminder_message',
     ];
 
     /**

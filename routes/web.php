@@ -39,6 +39,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
     Route::post('debts', [DebtController::class, 'store'])->name('debts.store');
     Route::post('debts/{debt}/payment', [DebtController::class, 'addPayment'])->name('debts.payment');
+    Route::post('debts/{debt}/notify', [DebtController::class, 'sendNotification'])->name('debts.notify');
+    Route::post('debts/{debt}/remind', [DebtController::class, 'sendReminderManual'])->name('debts.remind');
+    Route::get('debts/{debt}/whatsapp-link', [DebtController::class, 'whatsappLink'])->name('debts.whatsappLink');
+    Route::get('debts/settings', [DebtController::class, 'settings'])->name('debts.settings');
+    Route::post('debts/settings', [DebtController::class, 'saveSettings'])->name('debts.settings.save');
 
     // Budgets
     Route::get('budgets', [BudgetController::class, 'index'])->name('budgets.index');

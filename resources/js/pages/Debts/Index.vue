@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type AccountOption, type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     ArrowDownLeft,
     ArrowUpRight,
     CalendarDays,
     HandCoins,
+    Mail,
+    MessageCircle,
     Plus,
+    Settings,
+    Send,
     Wallet,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -47,6 +51,10 @@ interface Debt {
     status: DebtStatus;
     description: string | null;
     account: DebtAccount;
+    contact_email: string | null;
+    contact_phone: string | null;
+    initial_notification_sent: boolean;
+    last_reminder_sent_at: string | null;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -74,10 +82,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 const createOpen = ref(false);
 
 const createForm = useForm({
-    type:        'borrowed' as DebtType,
-    person_name: '',
-    amount:      '',
-    account_id:  '',
+    type:          'borrowed' as DebtType,
+    person_name:   '',
+    amount:        '',
+    account_id:    '',
+    contact_email: '',
+    contact_phone: '',
     fee:         '',
     due_date:    '',
     description: '',
@@ -209,6 +219,61 @@ function isOverdue(d: string | null): boolean {
     if (!d) return false;
     return new Date(d).getTime() < Date.now();
 }
+
+// ─── Notification actions ─────────────────────────────────────────────────────
+
+const notifyLoading = ref<number | null>(null);
+const remindLoading = ref<number | null>(null);
+
+async function sendNotify(debt: Debt) {
+    notifyLoading.value = debt.id;
+    try {
+        const res = await fetch(route('debts.notify', { debt: debt.id }), {
+            method: 'POST',
+            headers: {
+                'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? ''),
+                'Accept': 'application/json',
+            },
+        });
+        const data = await res.json();
+        if (data.success) {
+            router.reload({ only: ['debts'] });
+        }
+    } catch {} finally {
+        notifyLoading.value = null;
+    }
+}
+
+async function sendRemind(debt: Debt) {
+    remindLoading.value = debt.id;
+    try {
+        const res = await fetch(route('debts.remind', { debt: debt.id }), {
+            method: 'POST',
+            headers: {
+                'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? ''),
+                'Accept': 'application/json',
+            },
+        });
+        const data = await res.json();
+        if (data.success) {
+            router.reload({ only: ['debts'] });
+        }
+    } catch {} finally {
+        remindLoading.value = null;
+    }
+}
+
+async function openWhatsApp(debt: Debt, type: 'initial' | 'reminder') {
+    try {
+        const res = await fetch(route('debts.whatsappLink', { debt: debt.id }) + `?type=${type}`, {
+            headers: { 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (data.link) {
+            window.open(data.link, '_blank');
+        }
+    } catch {}
+}
 </script>
 
 <template>
@@ -224,8 +289,15 @@ function isOverdue(d: string | null): boolean {
                     <p class="text-muted-foreground text-sm">Track money you owe and money owed to you.</p>
                 </div>
 
-                <!-- Create dialog trigger -->
-                <Dialog v-model:open="createOpen">
+                <div class="flex items-center gap-2">
+                    <!-- Settings -->
+                    <Button variant="outline" size="sm" class="gap-1.5" as="a" href="/debts/settings">
+                        <Settings class="h-4 w-4" />
+                        <span class="hidden sm:inline">Settings</span>
+                    </Button>
+
+                    <!-- Create dialog trigger -->
+                    <Dialog v-model:open="createOpen">
                     <DialogTrigger as-child>
                         <Button size="sm" class="gap-2">
                             <Plus class="h-4 w-4" />
@@ -367,6 +439,26 @@ function isOverdue(d: string | null): boolean {
                                 <p v-if="createForm.errors.description" class="text-destructive text-xs">{{ createForm.errors.description }}</p>
                             </div>
 
+                            <!-- Contact info (for lending — to send notifications) -->
+                            <div v-if="isLending" class="rounded-md border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
+                                <p class="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                    <Send class="h-3.5 w-3.5" />
+                                    Borrower Contact (for notifications)
+                                </p>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class="grid gap-1.5">
+                                        <Label for="c-email" class="text-xs">Email</Label>
+                                        <Input id="c-email" type="email" v-model="createForm.contact_email" placeholder="person@example.com" />
+                                        <p v-if="createForm.errors.contact_email" class="text-destructive text-xs">{{ createForm.errors.contact_email }}</p>
+                                    </div>
+                                    <div class="grid gap-1.5">
+                                        <Label for="c-phone" class="text-xs">WhatsApp Number</Label>
+                                        <Input id="c-phone" v-model="createForm.contact_phone" placeholder="+94771234567" />
+                                        <p v-if="createForm.errors.contact_phone" class="text-destructive text-xs">{{ createForm.errors.contact_phone }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <DialogFooter>
                                 <Button type="button" variant="outline" @click="createOpen = false">Cancel</Button>
                                 <Button
@@ -380,6 +472,7 @@ function isOverdue(d: string | null): boolean {
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
 
             <!-- Summary cards -->
@@ -479,11 +572,33 @@ function isOverdue(d: string | null): boolean {
                                     <template v-else-if="isDueSoon(debt.due_date)"> (Soon)</template>
                                 </span>
                             </div>
-                            <div v-if="debt.status !== 'settled'" class="mt-3">
+                            <div v-if="debt.status !== 'settled'" class="mt-3 flex flex-col gap-1.5">
                                 <Button size="sm" variant="outline" class="h-8 w-full gap-1 text-xs" @click="openPayment(debt)">
                                     <Plus class="h-3 w-3" />
                                     Add Payment
                                 </Button>
+                                <!-- Notify / Remind buttons for lent debts with contact info -->
+                                <div v-if="debt.type === 'lent' && (debt.contact_email || debt.contact_phone)" class="flex gap-1.5">
+                                    <Button
+                                        v-if="debt.contact_email"
+                                        size="sm" variant="outline"
+                                        class="h-7 flex-1 gap-1 text-[10px]"
+                                        :disabled="notifyLoading === debt.id || remindLoading === debt.id"
+                                        @click="debt.initial_notification_sent ? sendRemind(debt) : sendNotify(debt)"
+                                    >
+                                        <Mail class="h-3 w-3" />
+                                        {{ debt.initial_notification_sent ? 'Remind' : 'Notify' }}
+                                    </Button>
+                                    <Button
+                                        v-if="debt.contact_phone"
+                                        size="sm" variant="outline"
+                                        class="h-7 flex-1 gap-1 text-[10px] text-green-600"
+                                        @click="openWhatsApp(debt, debt.initial_notification_sent ? 'reminder' : 'initial')"
+                                    >
+                                        <MessageCircle class="h-3 w-3" />
+                                        WhatsApp
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -559,17 +674,44 @@ function isOverdue(d: string | null): boolean {
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 text-right">
-                                        <Button
-                                            v-if="debt.status !== 'settled'"
-                                            size="sm"
-                                            variant="outline"
-                                            class="h-7 gap-1 text-xs"
-                                            @click="openPayment(debt)"
-                                        >
-                                            <Plus class="h-3 w-3" />
-                                            Add Payment
-                                        </Button>
-                                        <span v-else class="text-muted-foreground text-xs italic">Settled</span>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <Button
+                                                v-if="debt.status !== 'settled'"
+                                                size="sm"
+                                                variant="outline"
+                                                class="h-7 gap-1 text-xs"
+                                                @click="openPayment(debt)"
+                                            >
+                                                <Plus class="h-3 w-3" />
+                                                Add Payment
+                                            </Button>
+                                            <span v-if="debt.status === 'settled'" class="text-muted-foreground text-xs italic">Settled</span>
+
+                                            <template v-if="debt.type === 'lent' && debt.status !== 'settled' && (debt.contact_email || debt.contact_phone)">
+                                                <Button
+                                                    v-if="debt.contact_email"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    class="h-7 gap-1 text-xs"
+                                                    :title="debt.initial_notification_sent ? 'Resend notification' : 'Send initial notification'"
+                                                    @click="sendNotify(debt)"
+                                                >
+                                                    <Mail class="h-3 w-3" />
+                                                    {{ debt.initial_notification_sent ? 'Remind' : 'Notify' }}
+                                                </Button>
+                                                <Button
+                                                    v-if="debt.contact_phone"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    class="h-7 gap-1 text-xs text-green-600 dark:text-green-400"
+                                                    title="Send WhatsApp message"
+                                                    @click="openWhatsApp(debt)"
+                                                >
+                                                    <MessageCircle class="h-3 w-3" />
+                                                    WhatsApp
+                                                </Button>
+                                            </template>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>

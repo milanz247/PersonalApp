@@ -21,12 +21,18 @@ class Debt extends Model
         'due_date',
         'status',
         'description',
+        'contact_email',
+        'contact_phone',
+        'initial_notification_sent',
+        'last_reminder_sent_at',
     ];
 
     protected $casts = [
-        'amount'           => 'decimal:2',
-        'remaining_amount' => 'decimal:2',
-        'due_date'         => 'date',
+        'amount'                     => 'decimal:2',
+        'remaining_amount'           => 'decimal:2',
+        'due_date'                   => 'date',
+        'initial_notification_sent'  => 'boolean',
+        'last_reminder_sent_at'      => 'datetime',
     ];
 
     public function user(): BelongsTo
