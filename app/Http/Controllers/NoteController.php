@@ -20,12 +20,14 @@ class NoteController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $tz   = $user->timezone ?? 'Asia/Colombo';
+        $now  = Carbon::now($tz);
 
         $allNotes = Note::where('user_id', $user->id)->whereNotNull('note_date')->get();
 
         $totalEntries     = $allNotes->count();
         $thisMonthEntries = $allNotes
-            ->filter(fn ($n) => $n->note_date->year === now()->year && $n->note_date->month === now()->month)
+            ->filter(fn ($n) => $n->note_date->year === $now->year && $n->note_date->month === $now->month)
             ->count();
 
         $grouped      = $allNotes->groupBy(fn ($n) => $n->note_date->format('Y-m'))->map->count()->sortDesc();
@@ -37,7 +39,7 @@ class NoteController extends Controller
 
         $dates = $allNotes->pluck('note_date')->map(fn ($d) => $d->format('Y-m-d'))->unique()->sort()->values();
         $streak = 0;
-        $check  = now()->startOfDay();
+        $check  = $now->copy()->startOfDay();
         while ($dates->contains($check->format('Y-m-d'))) {
             $streak++;
             $check->subDay();
@@ -58,7 +60,7 @@ class NoteController extends Controller
             ->get();
 
         $onThisDay = Note::where('user_id', $user->id)
-            ->whereDate('note_date', now()->subYear()->toDateString())
+            ->whereDate('note_date', $now->copy()->subYear()->toDateString())
             ->orderBy('created_at')
             ->get();
 
@@ -73,7 +75,8 @@ class NoteController extends Controller
     public function planner(Request $request): Response
     {
         $user = $request->user();
-        $year = (int) $request->query('year', now()->year);
+        $tz   = $user->timezone ?? 'Asia/Colombo';
+        $year = (int) $request->query('year', Carbon::now($tz)->year);
 
         $yearCounts = Note::where('user_id', $user->id)
             ->whereNotNull('note_date')
@@ -85,6 +88,7 @@ class NoteController extends Controller
         return Inertia::render('Notes/Planner', [
             'year'        => $year,
             'yearCounts'  => $yearCounts,
+            'todayStr'    => Carbon::now($tz)->toDateString(),
             'selectedDay' => $request->query('day'),
         ]);
     }
@@ -93,9 +97,11 @@ class NoteController extends Controller
     public function newEntry(Request $request): Response
     {
         $user = $request->user();
+        $tz   = $user->timezone ?? 'Asia/Colombo';
         return Inertia::render('Notes/NewEntry', [
-            'date'         => $request->query('date', now()->toDateString()),
-            'hasTelegram'  => (bool) $user->telegram_bot_token && (bool) $user->telegram_chat_id,
+            'date'          => $request->query('date', Carbon::now($tz)->toDateString()),
+            'hasTelegram'   => (bool) $user->telegram_bot_token && (bool) $user->telegram_chat_id,
+            'userTimezone'  => $tz,
         ]);
     }
 
@@ -183,7 +189,8 @@ class NoteController extends Controller
 
         // Auto-generate title from date if not provided
         if (empty($validated['title'])) {
-            $validated['title'] = Carbon::parse($validated['note_date'])
+            $tz = $request->user()->timezone ?? 'Asia/Colombo';
+            $validated['title'] = Carbon::parse($validated['note_date'], $tz)
                 ->format('l, F j, Y');
         }
 
@@ -407,7 +414,7 @@ class NoteController extends Controller
                 "https://api.telegram.org/bot{$user->telegram_bot_token}/sendMessage",
                 [
                     'chat_id'    => $user->telegram_chat_id,
-                    'text'       => "\u2705 Diary entry saved for {$now->format('l, M j')}!",
+                    'text'       => "\u2705 <b>Diary entry saved!</b>\n\n\ud83d\udcc5 {$now->format('l, F j, Y')}\n\u23f0 {$now->format('H:i')} ({$tz})",
                     'parse_mode' => 'HTML',
                 ]
             );

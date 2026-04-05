@@ -8,9 +8,14 @@ import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { ArrowLeft, Save, Smile, Send, AlertTriangle } from 'lucide-vue-next';
 
-const props = defineProps<{ date: string; hasTelegram: boolean }>();
+const props = defineProps<{ date: string; hasTelegram: boolean; userTimezone: string }>();
 
 const page = usePage();
+
+// Today's date in user's configured timezone
+function todayInTz(): string {
+    return new Date().toLocaleDateString('en-CA', { timeZone: props.userTimezone });
+}
 
 const moodOptions = [
     { value: 'happy',   emoji: '😊', label: 'Happy' },
@@ -151,7 +156,7 @@ function selectMood(value: string) {
                                 <Input
                                     type="date"
                                     v-model="form.note_date"
-                                    :max="new Date().toISOString().split('T')[0]"
+                                    :max="todayInTz()"
                                     required
                                     class="h-10"
                                 />

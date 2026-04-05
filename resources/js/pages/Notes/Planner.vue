@@ -23,6 +23,7 @@ interface Note {
 const props = defineProps<{
     year: number;
     yearCounts: Record<string, number>;
+    todayStr: string;
     selectedDay?: string;
 }>();
 
@@ -30,7 +31,7 @@ const props = defineProps<{
 const MONTH_NAMES = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
-const todayStr = new Date().toISOString().split('T')[0];
+const todayStr = props.todayStr; // server-provided, timezone-aware
 
 const moodEmoji: Record<string, string> = {
     happy: '😊', sad: '😢', angry: '😠', calm: '😌', excited: '🤩',
