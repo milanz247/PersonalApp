@@ -64,7 +64,8 @@ class DebtController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        DB::transaction(function () use ($user, $validated, $account, $amount, $fee, $isBorrow) {
+        $debt = null;
+        DB::transaction(function () use ($user, $validated, $account, $amount, $fee, $isBorrow, &$debt) {
             // Look up system categories
             $bankFeesCategory = Category::where('name', 'Bank/ATM Fees')->whereNull('user_id')->first();
             $debtCategory     = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
