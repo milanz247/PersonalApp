@@ -155,10 +155,10 @@ class DebtController extends Controller
 
         $label = $isBorrow ? 'Debt (borrowed)' : 'Loan (lent)';
 
-        // Send initial notification for lent debts (if auto-send enabled)
+        // Send initial notification for lent debts when contact info was provided
         $notifSent = false;
-        if (! $isBorrow && $user->debt_auto_send_initial) {
-            $debt = Debt::find($debt->id); // refresh
+        if (! $isBorrow && $debt && ($validated['contact_email'] ?? null || $validated['contact_phone'] ?? null)) {
+            $debt      = Debt::find($debt->id); // refresh
             if ($debt) {
                 $notifSent = $this->sendInitialNotification($user, $debt);
             }
