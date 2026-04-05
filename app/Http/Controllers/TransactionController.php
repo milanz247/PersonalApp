@@ -55,27 +55,52 @@ class TransactionController extends Controller
         $amount    = (float) $validated['amount'];
 
         DB::transaction(function () use ($user, $validated, $amount) {
-            Transaction::create([
-                'user_id'         => $user->id,
-                'from_account_id' => $validated['from_account_id'] ?? null,
-                'to_account_id'   => $validated['to_account_id'] ?? null,
-                'category_id'     => $validated['category_id'],
-                'type'            => $validated['type'],
-                'amount'          => $amount,
-                'fee'             => 0,
-                'date'            => $validated['date'],
-                'note'            => $validated['note'] ?? null,
-            ]);
-
             if ($validated['type'] === 'expense') {
+                // Lock the row so concurrent requests cannot read stale balance
                 $account = Account::where('id', $validated['from_account_id'])
                     ->where('user_id', $user->id)
+                    ->lockForUpdate()
                     ->firstOrFail();
+
+                if ((float) $account->balance < $amount) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'amount' => 'Insufficient balance. Available: '
+                            . number_format((float) $account->balance, 2)
+                            . ', required: '
+                            . number_format($amount, 2) . '.',
+                    ]);
+                }
+
+                Transaction::create([
+                    'user_id'         => $user->id,
+                    'from_account_id' => $validated['from_account_id'],
+                    'to_account_id'   => null,
+                    'category_id'     => $validated['category_id'],
+                    'type'            => 'expense',
+                    'amount'          => $amount,
+                    'fee'             => 0,
+                    'date'            => $validated['date'],
+                    'note'            => $validated['note'] ?? null,
+                ]);
+
                 $account->decrement('balance', $amount);
             } else {
                 $account = Account::where('id', $validated['to_account_id'])
                     ->where('user_id', $user->id)
                     ->firstOrFail();
+
+                Transaction::create([
+                    'user_id'         => $user->id,
+                    'from_account_id' => null,
+                    'to_account_id'   => $validated['to_account_id'],
+                    'category_id'     => $validated['category_id'],
+                    'type'            => 'income',
+                    'amount'          => $amount,
+                    'fee'             => 0,
+                    'date'            => $validated['date'],
+                    'note'            => $validated['note'] ?? null,
+                ]);
+
                 $account->increment('balance', $amount);
             }
         });

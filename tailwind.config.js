@@ -12,7 +12,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Instrument Sans', ...defaultTheme.fontFamily.sans],
+                sans:     ['Instrument Sans', ...defaultTheme.fontFamily.sans],
+                playfair: ['"Playfair Display"', 'Georgia', 'serif'],
+                dancing:  ['"Dancing Script"', 'cursive'],
             },
             borderRadius: {
                 lg: 'var(--radius)',

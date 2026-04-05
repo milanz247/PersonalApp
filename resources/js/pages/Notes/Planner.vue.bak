@@ -1,0 +1,685 @@
+<script setup lang="ts">
+import NotebookLayout from '@/layouts/NotebookLayout.vue';
+import TiptapEditor from '@/components/TiptapEditor.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Head, useForm, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import {
+    ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Clock,
+    Maximize2, Minimize2, Smile,
+} from 'lucide-vue-next';
+
+// ── Types ─────────────────────────────────────────────────────────
+interface Note {
+    id: number;
+    title: string;
+    content: string | null;
+    color: string;
+    is_pinned: boolean;
+    note_date: string;
+    mood: string | null;
+}
+
+// ── Props ─────────────────────────────────────────────────────────
+const props = defineProps<{
+    view: string;
+    year: number;
+    month: number;
+    day: string;          // YYYY-MM-DD
+    weekStart: string;
+    weekEnd: string;
+    yearCounts: Record<string, number>;
+    monthNotes: Record<string, Note[]>;
+    weekNotes: Record<string, Note[]>;
+    dayNotes: Note[];
+}>();
+
+// ── Helpers ───────────────────────────────────────────────────────
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const DAY_NAMES_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+const todayStr = new Date().toISOString().split('T')[0];
+
+const moodEmoji: Record<string, string> = {
+    happy: '😊', sad: '😢', angry: '😠', calm: '😌', excited: '🤩',
+};
+const colorBg: Record<string, string> = {
+    default: '',
+    yellow:  'bg-yellow-50 dark:bg-yellow-950/30',
+    green:   'bg-green-50 dark:bg-green-950/30',
+    blue:    'bg-blue-50 dark:bg-blue-950/30',
+    pink:    'bg-pink-50 dark:bg-pink-950/30',
+    purple:  'bg-purple-50 dark:bg-purple-950/30',
+};
+
+function readingTime(content: string | null | undefined): string {
+    if (!content) return '< 1 min';
+    const words = content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+    const m = Math.ceil(words / 200);
+    return m < 1 ? '< 1 min' : `${m} min`;
+}
+function formatDate(raw: string): string {
+    const [y, m, d] = raw.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+}
+function formatDateShort(raw: string): string {
+    const [y, m, d] = raw.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric',
+    });
+}
+function heatColor(count: number): string {
+    if (count === 0) return '';
+    if (count === 1) return 'bg-violet-100 dark:bg-violet-900/40';
+    if (count === 2) return 'bg-violet-300 dark:bg-violet-700/70';
+    return 'bg-violet-500 dark:bg-violet-500 text-white';
+}
+function pad(n: number): string { return String(n).padStart(2,'0'); }
+function dateKey(y: number, m: number, d: number): string {
+    return `${y}-${pad(m)}-${pad(d)}`;
+}
+
+// ── Tab navigation ────────────────────────────────────────────────
+const VIEWS = ['year','month','week','day'] as const;
+function goView(v: string) {
+    router.get('/notes/planner', {
+        view: v,
+        year: props.year,
+        month: props.month,
+        day: props.day,
+    }, { preserveState: false });
+}
+
+// ── Period navigation ─────────────────────────────────────────────
+function navYear(delta: number) {
+    router.get('/notes/planner', { view: 'year', year: props.year + delta }, { preserveState: false });
+}
+function navMonth(delta: number) {
+    let y = props.year; let m = props.month + delta;
+    if (m < 1)  { y--; m = 12; }
+    if (m > 12) { y++; m = 1; }
+    router.get('/notes/planner', { view: 'month', year: y, month: m }, { preserveState: false });
+}
+function navWeek(delta: number) {
+    const d = new Date(props.weekStart);
+    d.setDate(d.getDate() + delta * 7);
+    router.get('/notes/planner', {
+        view: 'week',
+        day: d.toISOString().split('T')[0],
+    }, { preserveState: false });
+}
+function navDay(delta: number) {
+    const d = new Date(props.day);
+    d.setDate(d.getDate() + delta);
+    const newDateStr = d.toISOString().split('T')[0];
+    if (newDateStr > todayStr) return;
+    router.get('/notes/planner', {
+        view: 'day',
+        day: newDateStr,
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+    }, { preserveState: false });
+}
+function goDay(dateStr: string) {
+    if (dateStr > todayStr) return;
+    router.get('/notes/planner', { view: 'day', day: dateStr }, { preserveState: false });
+}
+
+// ── Year view: calendar grid helpers ─────────────────────────────
+function daysInMonth(y: number, m: number): number {
+    return new Date(y, m, 0).getDate();
+}
+function firstDayOfMonth(y: number, m: number): number {
+    // 0=Sun..6=Sat → convert to Mon-based 0-6
+    const d = new Date(y, m - 1, 1).getDay();
+    return (d + 6) % 7;
+}
+
+// ── Month view ────────────────────────────────────────────────────
+const monthGrid = computed(() => {
+    const y = props.year; const m = props.month;
+    const daysTotal = daysInMonth(y, m);
+    const startDow  = firstDayOfMonth(y, m); // 0=Mon
+    const cells: (null | { day: number; dateStr: string; notes: Note[] })[] = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    for (let d = 1; d <= daysTotal; d++) {
+        const dk = dateKey(y, m, d);
+        cells.push({ day: d, dateStr: dk, notes: props.monthNotes[dk] ?? [] });
+    }
+    return cells;
+});
+
+// ── Week view ─────────────────────────────────────────────────────
+const weekDays = computed(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(props.weekStart);
+        d.setDate(d.getDate() + i);
+        const dk = d.toISOString().split('T')[0];
+        return { dateStr: dk, label: DAY_NAMES_SHORT[i], notes: props.weekNotes[dk] ?? [] };
+    });
+});
+
+// ── Full-screen (Day view) ────────────────────────────────────────
+const isFullscreen = ref(false);
+
+// ── Create dialog ─────────────────────────────────────────────────
+const showCreate  = ref(false);
+const createPreset= ref(todayStr);
+const createForm  = useForm({
+    title: '', content: '', color: 'default', note_date: todayStr, mood: '' as string | null,
+});
+function openCreate(dateStr: string = todayStr) {
+    createPreset.value   = dateStr;
+    createForm.reset();
+    createForm.note_date = dateStr;
+    createForm.mood      = null;
+    showCreate.value     = true;
+}
+function submitCreate() {
+    createForm.post(route('notes.store'), {
+        preserveScroll: true,
+        onSuccess: () => { showCreate.value = false; createForm.reset(); },
+    });
+}
+
+// ── Edit dialog ───────────────────────────────────────────────────
+const showEdit  = ref(false);
+const editingId = ref<number | null>(null);
+const editForm  = useForm({
+    title: '', content: '', color: 'default', note_date: todayStr, mood: '' as string | null,
+});
+function openEdit(note: Note) {
+    editingId.value    = note.id;
+    editForm.title     = note.title;
+    editForm.content   = note.content ?? '';
+    editForm.color     = note.color;
+    editForm.note_date = note.note_date;
+    editForm.mood      = note.mood;
+    showEdit.value     = true;
+}
+function submitEdit() {
+    if (!editingId.value) return;
+    editForm.put(route('notes.update', editingId.value), {
+        preserveScroll: true,
+        onSuccess: () => { showEdit.value = false; },
+    });
+}
+
+// ── Delete dialog ─────────────────────────────────────────────────
+const showDelete    = ref(false);
+const deletingId    = ref<number | null>(null);
+const deletingTitle = ref('');
+function openDelete(note: Note) {
+    deletingId.value    = note.id;
+    deletingTitle.value = note.title;
+    showDelete.value    = true;
+}
+function confirmDelete() {
+    if (!deletingId.value) return;
+    router.delete(route('notes.destroy', deletingId.value), {
+        preserveScroll: true,
+        onSuccess: () => { showDelete.value = false; },
+    });
+}
+</script>
+
+<template>
+    <Head title="Planner · My Diary" />
+
+    <!-- Full-screen wrapper (Day view only) -->
+    <div
+        :class="isFullscreen
+            ? 'fixed inset-0 z-50 overflow-auto bg-zinc-50 dark:bg-zinc-950'
+            : ''"
+    >
+        <!-- Wrap in layout only when not fullscreen -->
+        <component :is="isFullscreen ? 'div' : NotebookLayout">
+            <div class="mx-auto max-w-6xl px-4 py-6">
+
+                <!-- Tabs -->
+                <div class="mb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-1 rounded-xl border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
+                        <button
+                            v-for="v in VIEWS" :key="v"
+                            type="button"
+                            class="rounded-lg px-4 py-1.5 text-sm font-medium capitalize transition-colors"
+                            :class="view === v
+                                ? 'bg-violet-600 text-white shadow'
+                                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'"
+                            @click="goView(v)"
+                        >{{ v }}</button>
+                    </div>
+
+                    <!-- Period navigator -->
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                            class="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            @click="view==='year' ? navYear(-1) : view==='month' ? navMonth(-1) : view==='week' ? navWeek(-1) : navDay(-1)">
+                            <ChevronLeft class="h-4 w-4" />
+                        </button>
+                        <span class="min-w-[160px] text-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                            <template v-if="view==='year'">{{ year }}</template>
+                            <template v-else-if="view==='month'">{{ MONTH_NAMES[month-1] }} {{ year }}</template>
+                            <template v-else-if="view==='week'">{{ formatDateShort(weekStart) }} – {{ formatDateShort(weekEnd) }}</template>
+                            <template v-else>{{ formatDateShort(day) }}</template>
+                        </span>
+                        <button type="button"
+                            class="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="view === 'day' && day >= todayStr"
+                            @click="view==='year' ? navYear(1) : view==='month' ? navMonth(1) : view==='week' ? navWeek(1) : navDay(1)">
+                            <ChevronRight class="h-4 w-4" />
+                        </button>
+                        <!-- Today button -->
+                        <button type="button"
+                            class="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            @click="router.get('/notes/planner', { view, day: todayStr, year: new Date().getFullYear(), month: new Date().getMonth()+1 })">
+                            Today
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ═══════════════ YEAR VIEW ═══════════════ -->
+                <div v-if="view === 'year'">
+                    <!-- Legend -->
+                    <div class="mb-4 flex items-center gap-2 justify-end text-xs text-zinc-400">
+                        <span>Less</span>
+                        <div class="h-3 w-3 rounded-sm bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"></div>
+                        <div class="h-3 w-3 rounded-sm bg-violet-100 dark:bg-violet-900/40"></div>
+                        <div class="h-3 w-3 rounded-sm bg-violet-300 dark:bg-violet-700/70"></div>
+                        <div class="h-3 w-3 rounded-sm bg-violet-500 dark:bg-violet-500"></div>
+                        <span>More</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                        <div v-for="mi in 12" :key="mi"
+                             class="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                            <div class="mb-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                {{ MONTH_NAMES[mi-1] }}
+                            </div>
+                            <!-- Day-of-week header -->
+                            <div class="mb-1 grid grid-cols-7 gap-0.5">
+                                <div v-for="d in ['M','T','W','T','F','S','S']" :key="d"
+                                     class="text-center text-[9px] text-zinc-400">{{ d }}</div>
+                            </div>
+                            <!-- Day cells -->
+                            <div class="grid grid-cols-7 gap-0.5">
+                                <!-- Leading blanks -->
+                                <div v-for="_ in firstDayOfMonth(year, mi)" :key="'b'+_" />
+                                <button
+                                    v-for="d in daysInMonth(year, mi)" :key="d"
+                                    type="button"
+                                    class="aspect-square rounded-sm text-[9px] transition-opacity hover:opacity-80"
+                                    :class="[
+                                        dateKey(year,mi,d) > todayStr
+                                            ? 'bg-zinc-100 dark:bg-zinc-800 opacity-25 cursor-not-allowed'
+                                            : (heatColor(yearCounts[dateKey(year,mi,d)] ?? 0) || 'bg-zinc-100 dark:bg-zinc-800') + ' cursor-pointer',
+                                        dateKey(year,mi,d) === todayStr ? 'ring-1 ring-violet-400' : ''
+                                    ]"
+                                    :title="dateKey(year,mi,d) > todayStr ? 'Future date' : dateKey(year,mi,d)"
+                                    @click="goDay(dateKey(year,mi,d))"
+                                >{{ d }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════ MONTH VIEW ═══════════════ -->
+                <div v-else-if="view === 'month'">
+                    <!-- Day-of-week headers -->
+                    <div class="mb-2 grid grid-cols-7 gap-1">
+                        <div v-for="d in DAY_NAMES_SHORT" :key="d"
+                             class="text-center text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{{ d }}</div>
+                    </div>
+                    <!-- Calendar grid -->
+                    <div class="grid grid-cols-7 gap-1">
+                        <div
+                            v-for="(cell, idx) in monthGrid" :key="idx"
+                            class="min-h-[90px] rounded-lg border p-1.5 text-xs"
+                            :class="cell
+                                ? cell.dateStr > todayStr
+                                    ? 'border-zinc-100 bg-zinc-50 dark:border-zinc-800/50 dark:bg-zinc-900/50 opacity-40 cursor-not-allowed'
+                                    : cell.dateStr === todayStr
+                                        ? 'border-violet-400 bg-violet-50 dark:border-violet-700 dark:bg-violet-950/20'
+                                        : cell.notes.length > 0
+                                            ? 'border-violet-200 bg-violet-50/50 dark:border-violet-900/40 dark:bg-violet-950/10 cursor-pointer hover:border-violet-300'
+                                            : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                                : 'border-transparent bg-transparent'"
+                            @click="cell && goDay(cell.dateStr)"
+                        >
+                            <template v-if="cell">
+                                <div class="flex items-center justify-between">
+                                    <span
+                                        class="flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold"
+                                        :class="cell.dateStr === todayStr
+                                            ? 'bg-violet-600 text-white'
+                                            : 'text-zinc-700 dark:text-zinc-300'"
+                                    >{{ cell.day }}</span>
+                                    <button v-if="cell.notes.length === 0 && cell.dateStr <= todayStr"
+                                        type="button"
+                                        class="opacity-0 transition-opacity hover:opacity-100 rounded p-0.5 text-zinc-400 hover:text-violet-500 group-hover:opacity-100"
+                                        @click.stop="router.get('/notes/write/' + cell.dateStr)">
+                                        <Plus class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <div class="mt-1 flex flex-col gap-0.5">
+                                    <div
+                                        v-for="note in cell.notes.slice(0,2)" :key="note.id"
+                                        class="truncate rounded bg-violet-100 px-1 py-0.5 text-[10px] text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                                        :title="note.title"
+                                    >{{ note.title }}</div>
+                                    <div v-if="cell.notes.length > 2"
+                                         class="text-[10px] text-zinc-400">+{{ cell.notes.length - 2 }} more</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════ WEEK VIEW ═══════════════ -->
+                <div v-else-if="view === 'week'">
+                    <div class="grid grid-cols-7 gap-2">
+                        <div
+                            v-for="wd in weekDays" :key="wd.dateStr"
+                            class="flex flex-col gap-2 rounded-xl border p-2 min-h-[300px]"
+                            :class="wd.dateStr > todayStr
+                                ? 'border-zinc-100 bg-zinc-50/50 dark:border-zinc-800/50 dark:bg-zinc-900/30 opacity-50'
+                                : wd.dateStr === todayStr
+                                    ? 'border-violet-400 bg-violet-50 dark:border-violet-700 dark:bg-violet-950/20'
+                                    : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'"
+                        >
+                            <!-- Column header -->
+                            <div class="text-center">
+                                <div class="text-[10px] font-semibold uppercase text-zinc-400">{{ wd.label }}</div>
+                                <div
+                                    class="mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold"
+                                    :class="wd.dateStr === todayStr ? 'bg-violet-600 text-white' : 'text-zinc-700 dark:text-zinc-300'"
+                                >{{ parseInt(wd.dateStr.split('-')[2]) }}</div>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="flex flex-1 flex-col gap-1">
+                                <button
+                                    v-for="note in wd.notes" :key="note.id"
+                                    type="button"
+                                    class="w-full rounded-lg bg-violet-100 px-2 py-1.5 text-left text-[10px] font-medium text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-900/50"
+                                    @click="goDay(wd.dateStr)"
+                                >
+                                    <div class="truncate">{{ note.title }}</div>
+                                    <div v-if="note.mood" class="text-xs mt-0.5">{{ moodEmoji[note.mood] }}</div>
+                                </button>
+                            </div>
+
+                            <!-- Add button -->
+                            <button
+                                v-if="wd.dateStr <= todayStr"
+                                type="button"
+                                class="mt-auto flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-200 py-1.5 text-[10px] text-zinc-400 transition-colors hover:border-violet-300 hover:text-violet-500 dark:border-zinc-700 dark:hover:border-violet-700"
+                                @click="router.get('/notes/write/' + wd.dateStr)"
+                            >
+                                <Plus class="h-3 w-3" />Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════ DAY VIEW ═══════════════ -->
+                <div v-else-if="view === 'day'">
+                    <!-- Full-screen toggle -->
+                    <div class="mb-4 flex justify-end">
+                        <button
+                            type="button"
+                            class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            @click="isFullscreen = !isFullscreen"
+                        >
+                            <Maximize2 v-if="!isFullscreen" class="h-3.5 w-3.5" />
+                            <Minimize2 v-else class="h-3.5 w-3.5" />
+                            {{ isFullscreen ? 'Exit full screen' : 'Full screen' }}
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
+                        <!-- Left: date sidebar -->
+                        <div class="flex flex-col gap-4">
+                            <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                                <div class="font-serif text-sm text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                                    {{ new Date(day).toLocaleDateString('en-US', { weekday: 'long' }) }}
+                                </div>
+                                <div class="mt-1 text-4xl font-bold text-zinc-800 dark:text-zinc-100">
+                                    {{ parseInt(day.split('-')[2]) }}
+                                </div>
+                                <div class="text-sm text-zinc-500 dark:text-zinc-400">
+                                    {{ new Date(day).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) }}
+                                </div>
+                                <div v-if="dayNotes.length > 0" class="mt-3 text-xs text-zinc-400">
+                                    {{ dayNotes.length }} {{ dayNotes.length === 1 ? 'entry' : 'entries' }} today
+                                </div>
+                            </div>
+
+                            <!-- Timeline -->
+                            <div v-if="dayNotes.length > 0" class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                                <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Timeline</div>
+                                <div class="relative pl-4">
+                                    <div class="absolute left-[7px] top-1 bottom-1 w-px bg-zinc-200 dark:bg-zinc-700" />
+                                    <div v-for="note in dayNotes" :key="note.id" class="relative mb-3">
+                                        <div class="absolute -left-4 top-1 h-2 w-2 rounded-full bg-violet-400" />
+                                        <div class="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{{ note.title }}</div>
+                                        <div v-if="note.mood" class="text-[10px] text-zinc-400">{{ moodEmoji[note.mood] }} {{ note.mood }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: entries -->
+                        <div>
+                            <!-- Empty state for day -->
+                            <div v-if="dayNotes.length === 0"
+                                 class="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 py-20 dark:border-zinc-700">
+                                <svg class="mb-4 h-16 w-16 opacity-30" viewBox="0 0 80 80" fill="none">
+                                    <rect x="15" y="10" width="38" height="52" rx="3" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="27" y1="28" x2="47" y2="28" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    <line x1="27" y1="36" x2="47" y2="36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    <line x1="27" y1="44" x2="38" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                                <p class="font-serif italic text-zinc-400">Nothing written yet.</p>
+                                <Button v-if="day <= todayStr" class="mt-4 gap-1.5 bg-violet-600 hover:bg-violet-700" size="sm" @click="router.get('/notes/write/' + day)">
+                                    <Plus class="h-3.5 w-3.5" /> Write an entry
+                                </Button>
+                            </div>
+
+                            <div v-else class="flex flex-col gap-4">
+                                <div
+                                    v-for="note in dayNotes" :key="note.id"
+                                    class="group rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+                                    :class="colorBg[note.color] ?? ''"
+                                >
+                                    <!-- Header -->
+                                    <div class="mb-3 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h2 class="font-semibold text-zinc-800 dark:text-zinc-100">{{ note.title }}</h2>
+                                            <div class="mt-0.5 flex items-center gap-2 text-xs text-zinc-400">
+                                                <span v-if="note.mood">{{ moodEmoji[note.mood] }} {{ note.mood }}</span>
+                                                <span class="flex items-center gap-1">
+                                                    <Clock class="h-3 w-3" />{{ readingTime(note.content) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <Button variant="ghost" size="icon" class="h-7 w-7" @click="openEdit(note)">
+                                                <Pencil class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" class="h-7 w-7 text-red-500 hover:text-red-600"
+                                                @click="openDelete(note)">
+                                                <Trash2 class="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <!-- Content -->
+                                    <div
+                                        class="diary-content prose prose-sm max-w-none dark:prose-invert text-zinc-700 dark:text-zinc-300"
+                                        v-html="note.content ?? '<p class=\'text-zinc-400 italic\'>No content</p>'"
+                                    />
+                                </div>
+
+                                <!-- Add more -->
+                                <button
+                                    v-if="day <= todayStr"
+                                    type="button"
+                                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-200 py-4 text-sm text-zinc-400 transition-colors hover:border-violet-300 hover:text-violet-500 dark:border-zinc-700 dark:hover:border-violet-700"
+                                    @click="router.get('/notes/write/' + day)"
+                                >
+                                    <Plus class="h-4 w-4" /> Add another entry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </component>
+    </div>
+
+    <!-- ─ Create Dialog ─────────────────────────────────── -->
+    <Dialog v-model:open="showCreate">
+        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle class="font-serif italic text-violet-700 dark:text-violet-300">
+                    <Smile class="mr-1 inline h-4 w-4" />
+                    New Entry
+                </DialogTitle>
+            </DialogHeader>
+            <form class="flex flex-col gap-4 py-2" @submit.prevent="submitCreate">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <Label>Date</Label>
+                        <Input type="date" v-model="createForm.note_date" required />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <Label>Mood</Label>
+                        <select v-model="createForm.mood"
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <option :value="null">—</option>
+                            <option value="happy">😊 Happy</option>
+                            <option value="excited">🤩 Excited</option>
+                            <option value="calm">😌 Calm</option>
+                            <option value="sad">😢 Sad</option>
+                            <option value="angry">😠 Angry</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Title</Label>
+                    <Input v-model="createForm.title" placeholder="Entry title…" required />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Write…</Label>
+                    <TiptapEditor v-model="createForm.content" />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Color</Label>
+                    <div class="flex gap-2">
+                        <button
+                            v-for="c in ['default','yellow','green','blue','pink','purple']"
+                            :key="c" type="button"
+                            class="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
+                            :class="[
+                                { default:'bg-zinc-200', yellow:'bg-yellow-300', green:'bg-green-300', blue:'bg-blue-300', pink:'bg-pink-300', purple:'bg-purple-300' }[c],
+                                createForm.color === c ? 'border-violet-500 scale-110' : 'border-transparent',
+                            ]"
+                            @click="createForm.color = c"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" @click="showCreate = false">Cancel</Button>
+                    <Button type="submit" :disabled="createForm.processing" class="bg-violet-600 hover:bg-violet-700">
+                        Save Entry
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─ Edit Dialog ───────────────────────────────────── -->
+    <Dialog v-model:open="showEdit">
+        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle class="font-serif italic text-violet-700 dark:text-violet-300">Edit Entry</DialogTitle>
+            </DialogHeader>
+            <form class="flex flex-col gap-4 py-2" @submit.prevent="submitEdit">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <Label>Date</Label>
+                        <Input type="date" v-model="editForm.note_date" required />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <Label>Mood</Label>
+                        <select v-model="editForm.mood"
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <option :value="null">—</option>
+                            <option value="happy">😊 Happy</option>
+                            <option value="excited">🤩 Excited</option>
+                            <option value="calm">😌 Calm</option>
+                            <option value="sad">😢 Sad</option>
+                            <option value="angry">😠 Angry</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Title</Label>
+                    <Input v-model="editForm.title" required />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Write…</Label>
+                    <TiptapEditor v-model="editForm.content" />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <Label>Color</Label>
+                    <div class="flex gap-2">
+                        <button
+                            v-for="c in ['default','yellow','green','blue','pink','purple']"
+                            :key="c" type="button"
+                            class="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
+                            :class="[
+                                { default:'bg-zinc-200', yellow:'bg-yellow-300', green:'bg-green-300', blue:'bg-blue-300', pink:'bg-pink-300', purple:'bg-purple-300' }[c],
+                                editForm.color === c ? 'border-violet-500 scale-110' : 'border-transparent',
+                            ]"
+                            @click="editForm.color = c"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" @click="showEdit = false">Cancel</Button>
+                    <Button type="submit" :disabled="editForm.processing" class="bg-violet-600 hover:bg-violet-700">
+                        Save Changes
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─ Delete Confirm ────────────────────────────────── -->
+    <AlertDialog v-model:open="showDelete">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete entry?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    "<strong>{{ deletingTitle }}</strong>" will be permanently deleted.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="confirmDelete">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+</template>

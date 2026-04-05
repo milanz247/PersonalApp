@@ -50,6 +50,21 @@ class TransferController extends Controller
             $date   = $validated['date'];
             $note   = $validated['note'] ?? null;
 
+            // Re-fetch source account with a row-level lock to prevent concurrent over-spend
+            $fromAccount = Account::where('id', $fromAccount->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $required = $amount + $fee;
+            if ((float) $fromAccount->balance < $required) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'amount' => 'Insufficient balance. Available: '
+                        . number_format((float) $fromAccount->balance, 2)
+                        . ', required: '
+                        . number_format($required, 2) . ' (amount + fee).',
+                ]);
+            }
+
             // Look up the system 'Bank Transfer' category
             $transferCategory = Category::where('type', 'transfer')
                 ->where('is_system', true)

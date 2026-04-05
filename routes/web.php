@@ -6,6 +6,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
@@ -57,7 +58,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Backup
     Route::post('backup/run', [BackupController::class, 'runBackup'])->name('backup.run');
+
+    // Notebook / Diary
+    Route::get('notes', [NoteController::class, 'index'])->name('notes.index');
+    Route::get('notes/planner', [NoteController::class, 'planner'])->name('notes.planner');
+    Route::get('notes/new', [NoteController::class, 'newEntry'])->name('notes.new');
+    Route::get('notes/settings', [NoteController::class, 'diarySettings'])->name('notes.settings');
+    Route::post('notes/settings', [NoteController::class, 'saveDiarySettings'])->name('notes.settings.save');
+    Route::post('notes/settings/test', [NoteController::class, 'testTelegramConnection'])->name('notes.settings.test');
+    Route::post('notes/settings/detect-chat-id', [NoteController::class, 'detectChatId'])->name('notes.settings.detectChatId');
+    Route::post('notes/settings/register-webhook', [NoteController::class, 'registerWebhook'])->name('notes.settings.registerWebhook');
+    Route::get('notes/day-notes', [NoteController::class, 'dayNotesJson'])->name('notes.dayNotes');
+    Route::get('notes/search', [NoteController::class, 'search'])->name('notes.search');
+    Route::get('notes/pdf', [NoteController::class, 'exportPdf'])->name('notes.pdf');
+    Route::post('notes', [NoteController::class, 'store'])->name('notes.store');
+    Route::put('notes/{note}', [NoteController::class, 'update'])->name('notes.update');
+    Route::post('notes/{note}/pin', [NoteController::class, 'togglePin'])->name('notes.pin');
+    Route::delete('notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
 });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+// Telegram webhook — no auth, no CSRF (protected by per-user secret in URL)
+Route::post(
+    'telegram/webhook/{userId}/{secret}',
+    [NoteController::class, 'handleTelegramWebhook']
+)->name('telegram.webhook');

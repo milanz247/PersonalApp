@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Wallet, TrendingUp, Archive, Gem, ArrowRight, ShieldCheck } from 'lucide-vue-next';
+import { Wallet, TrendingUp, Gem, BookOpen, ArrowRight, ShieldCheck } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 
@@ -59,6 +59,7 @@ const pillars = [
         colorUrl: 'text-blue-600 dark:text-blue-400',
         bgBg: 'bg-blue-100/50 dark:bg-blue-900/30',
         route: 'dashboard',
+        loginRedirect: null,
     },
     {
         id: 'forex',
@@ -67,7 +68,8 @@ const pillars = [
         icon: TrendingUp,
         colorUrl: 'text-violet-600 dark:text-violet-400',
         bgBg: 'bg-violet-100/50 dark:bg-violet-900/30',
-        route: 'dashboard', // Update when true route is ready
+        route: 'dashboard',
+        loginRedirect: null,
     },
     {
         id: 'assets',
@@ -76,16 +78,18 @@ const pillars = [
         icon: Gem,
         colorUrl: 'text-emerald-600 dark:text-emerald-400',
         bgBg: 'bg-emerald-100/50 dark:bg-emerald-900/30',
-        route: 'dashboard', // Update when true route is ready
+        route: 'dashboard',
+        loginRedirect: null,
     },
     {
         id: 'vault',
-        title: 'Knowledge Vault',
-        description: 'Securely store personal documents, important links, and private notes.',
-        icon: Archive,
-        colorUrl: 'text-amber-600 dark:text-amber-400',
-        bgBg: 'bg-amber-100/50 dark:bg-amber-900/30',
-        route: 'dashboard', // Update when true route is ready
+        title: 'Personal Notebook',
+        description: 'Your daily diary & personal journal. Write notes, ideas, and goals for any day of the year.',
+        icon: BookOpen,
+        colorUrl: 'text-violet-600 dark:text-violet-400',
+        bgBg: 'bg-violet-100/50 dark:bg-violet-900/30',
+        route: 'notes.index',
+        loginRedirect: 'notes',
     }
 ];
 </script>
@@ -165,7 +169,7 @@ const pillars = [
 
                     <div class="mt-8">
                         <Link
-                            :href="user ? route(pillar.route) : route('login')"
+                            :href="user ? route(pillar.route) : (pillar.loginRedirect ? route('login') + '?redirect_to=' + pillar.loginRedirect : route('login'))"
                             class="inline-block w-full"
                         >
                             <Button

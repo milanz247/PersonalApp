@@ -191,7 +191,7 @@ function formatDate(d: string | null): string {
                                 >
                                     <option value="" disabled>Select account</option>
                                     <option v-for="acc in allAccounts" :key="acc.id" :value="acc.id">
-                                        {{ acc.name }}
+                                        {{ acc.name }} — {{ formatMoney(Number(acc.balance)) }}
                                     </option>
                                 </select>
                                 <p v-if="createForm.errors.account_id" class="text-xs text-destructive">{{ createForm.errors.account_id }}</p>

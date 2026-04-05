@@ -101,9 +101,19 @@ class RecurringTransactionController extends Controller
             'note'            => $recurring->description,
         ]);
 
-        // Update account balance
-        $account = Account::findOrFail($recurring->account_id);
+        // Update account balance — lock the row to prevent concurrent reads of stale balance
+        $account = Account::where('id', $recurring->account_id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
         if ($recurring->type === 'expense') {
+            if ((float) $account->balance < (float) $recurring->amount) {
+                throw new \RuntimeException(
+                    "Insufficient balance for recurring expense '{$recurring->description}'."
+                    . ' Available: ' . number_format((float) $account->balance, 2)
+                    . ', required: ' . number_format((float) $recurring->amount, 2) . '.'
+                );
+            }
             $account->decrement('balance', $recurring->amount);
         } else {
             $account->increment('balance', $recurring->amount);

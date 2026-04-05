@@ -29,6 +29,9 @@ class User extends Authenticatable
         'date_format',
         'avatar',
         'last_backup_at',
+        'telegram_bot_token',
+        'telegram_chat_id',
+        'telegram_webhook_secret',
     ];
 
     /**
@@ -39,6 +42,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'telegram_bot_token',
+        'telegram_chat_id',
+        'telegram_webhook_secret',
     ];
 
     /**
@@ -82,5 +88,10 @@ class User extends Authenticatable
     public function recurringTransactions(): HasMany
     {
         return $this->hasMany(RecurringTransaction::class);
+    }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class);
     }
 }

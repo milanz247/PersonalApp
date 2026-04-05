@@ -58,18 +58,29 @@ class DebtController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // For lending, ensure sufficient balance
-        if (!$isBorrow) {
-            $totalDeduct = $amount + $fee;
-            if ((float) $account->balance < $totalDeduct) {
-                return back()->withErrors(['amount' => "Insufficient balance. Available: {$account->balance}, Required: {$totalDeduct}"])->withInput();
-            }
-        }
-
         DB::transaction(function () use ($user, $validated, $account, $amount, $fee, $isBorrow) {
             // Look up system categories
             $bankFeesCategory = Category::where('name', 'Bank/ATM Fees')->whereNull('user_id')->first();
             $debtCategory     = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
+
+            // Re-fetch account with a row-level lock
+            $account = Account::where('id', $account->id)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // For lending, ensure sufficient balance
+            if (!$isBorrow) {
+                $totalDeduct = $amount + $fee;
+                if ((float) $account->balance < $totalDeduct) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'amount' => 'Insufficient balance. Available: '
+                            . number_format((float) $account->balance, 2)
+                            . ', required: '
+                            . number_format($totalDeduct, 2) . '.',
+                    ]);
+                }
+            }
 
             // Create the debt record first so we can link transactions via debt_id
             $debt = Debt::create([
@@ -169,20 +180,27 @@ class DebtController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // For borrowed debts: we are paying back → total deduction must not exceed balance
-        if ($debt->type === 'borrowed') {
-            $totalDeduct = $payment + $fee;
-            if ((float) $account->balance < $totalDeduct) {
-                return back()->withErrors(['payment_amount' => "Insufficient balance. Available: {$account->balance}, Required: {$totalDeduct} (payment + fee)."]);
-            }
-        }
-
         DB::transaction(function () use ($user, $debt, $account, $payment, $fee) {
             $debtCategory     = Category::where('name', 'Loans & Debts')->whereNull('user_id')->first();
             $bankFeesCategory = Category::where('name', 'Bank/ATM Fees')->whereNull('user_id')->first();
 
+            // Re-fetch account with a row-level lock
+            $account = Account::where('id', $account->id)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             if ($debt->type === 'borrowed') {
                 // We are paying someone back → payment + fee leave our account
+                $totalDeduct = $payment + $fee;
+                if ((float) $account->balance < $totalDeduct) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'payment_amount' => 'Insufficient balance. Available: '
+                            . number_format((float) $account->balance, 2)
+                            . ', required: '
+                            . number_format($totalDeduct, 2) . ' (payment + fee).',
+                    ]);
+                }
                 $account->decrement('balance', $payment + $fee);
 
                 // Main repayment transaction

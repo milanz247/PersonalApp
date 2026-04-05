@@ -373,7 +373,7 @@ function confirmDelete() {
                                             :value="acc.id"
                                             :disabled="String(acc.id) === String(transferForm.from_account_id)"
                                         >
-                                            {{ acc.name }}
+                                            {{ acc.name }} ({{ formatCurrency(acc.balance) }})
                                         </option>
                                     </select>
                                     <InputError :message="transferForm.errors.to_account_id" />

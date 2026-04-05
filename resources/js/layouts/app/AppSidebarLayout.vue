@@ -99,4 +99,14 @@ const menuItems: NavItem[] = [
     </Sheet>
 
     <Toaster />
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-200 bg-white px-4 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+        <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ page.props.name }}</span>
+        &nbsp;·&nbsp;
+        Developed by
+        <span class="font-medium text-zinc-700 dark:text-zinc-300">Milan Madusanka</span>
+        &nbsp;·&nbsp;
+        &copy; {{ new Date().getFullYear() }} All rights reserved.
+    </footer>
 </template>

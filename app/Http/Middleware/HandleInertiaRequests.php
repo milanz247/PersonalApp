@@ -30,8 +30,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'flash' => [
-                'success' => $request->session()->get('success'),
-                'error'   => $request->session()->get('error'),
+                'success'       => $request->session()->get('success'),
+                'error'         => $request->session()->get('error'),
+                'telegram_sent' => $request->session()->get('telegram_sent'),
             ],
             'userSettings' => fn () => $request->user() ? [
                 'currency_symbol' => $request->user()->currency_symbol ?? 'Rs.',

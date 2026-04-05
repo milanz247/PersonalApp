@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'telegram/webhook/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
