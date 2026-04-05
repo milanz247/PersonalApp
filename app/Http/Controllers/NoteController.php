@@ -68,6 +68,7 @@ class NoteController extends Controller
             'stats'         => $stats,
             'recentEntries' => $recentEntries,
             'onThisDay'     => $onThisDay,
+            'todayStr'      => $now->toDateString(),
         ]);
     }
 

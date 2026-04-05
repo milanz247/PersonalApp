@@ -4,9 +4,16 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Head, router } from '@inertiajs/vue3';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import TiptapEditor from '@/components/TiptapEditor.vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
-import { ChevronLeft, ChevronRight, Clock, BookOpen } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Clock, BookOpen, Pencil, Trash2, Plus } from 'lucide-vue-next';
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Note {
@@ -109,6 +116,69 @@ onMounted(() => {
         selectDay(props.selectedDay);
     }
 });
+
+// ── Mood / Color options ──────────────────────────────────────────
+const moodOptions = [
+    { value: 'happy',   emoji: '😊', label: 'Happy' },
+    { value: 'excited', emoji: '🤩', label: 'Excited' },
+    { value: 'calm',    emoji: '😌', label: 'Calm' },
+    { value: 'sad',     emoji: '😢', label: 'Sad' },
+    { value: 'angry',   emoji: '😠', label: 'Angry' },
+];
+const colorOptions = [
+    { value: 'default', bg: 'bg-zinc-200' },
+    { value: 'yellow',  bg: 'bg-yellow-300' },
+    { value: 'green',   bg: 'bg-green-300' },
+    { value: 'blue',    bg: 'bg-blue-300' },
+    { value: 'pink',    bg: 'bg-pink-300' },
+    { value: 'purple',  bg: 'bg-purple-300' },
+];
+
+// ── Edit dialog ───────────────────────────────────────────────────
+const showEdit   = ref(false);
+const editingId  = ref<number | null>(null);
+const editForm   = useForm({
+    title: '', content: '', color: 'default', note_date: '', mood: '' as string | null,
+});
+function openEdit(note: Note) {
+    editingId.value    = note.id;
+    editForm.title     = note.title;
+    editForm.content   = note.content ?? '';
+    editForm.color     = note.color;
+    editForm.note_date = note.note_date;
+    editForm.mood      = note.mood;
+    showEdit.value     = true;
+}
+function submitEdit() {
+    if (!editingId.value) return;
+    editForm.put(route('notes.update', editingId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showEdit.value = false;
+            selectDay(selectedDate.value);
+        },
+    });
+}
+
+// ── Delete dialog ─────────────────────────────────────────────────
+const showDelete    = ref(false);
+const deletingId    = ref<number | null>(null);
+const deletingTitle = ref('');
+function openDelete(note: Note) {
+    deletingId.value    = note.id;
+    deletingTitle.value = note.title;
+    showDelete.value    = true;
+}
+function confirmDelete() {
+    if (!deletingId.value) return;
+    router.delete(route('notes.destroy', deletingId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDelete.value = false;
+            selectDay(selectedDate.value);
+        },
+    });
+}
 </script>
 
 <template>
@@ -218,7 +288,7 @@ onMounted(() => {
                 <p class="font-serif italic text-zinc-400">No entries on this day.</p>
             </div>
 
-            <!-- Entries list (view-only preview) -->
+            <!-- Entries list -->
             <div v-else class="flex flex-col gap-3">
                 <div
                     v-for="note in dayNotes" :key="note.id"
@@ -235,14 +305,111 @@ onMounted(() => {
                                 <span class="flex items-center gap-1"><Clock class="h-3 w-3" />{{ readingTime(note.content) }}</span>
                             </div>
                         </div>
+                        <div v-if="note.note_date === todayStr" class="flex shrink-0 items-center gap-1">
+                            <button
+                                class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-950/30"
+                                title="Edit entry"
+                                @click="openEdit(note)"
+                            >
+                                <Pencil class="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                                title="Delete entry"
+                                @click="openDelete(note)"
+                            >
+                                <Trash2 class="h-3.5 w-3.5" />
+                            </button>
+                        </div>
                     </div>
                     <div v-if="note.content"
                          class="mt-2 prose prose-sm max-w-none text-zinc-600 dark:prose-invert dark:text-zinc-400"
                          v-html="note.content" />
                 </div>
 
-
+                <!-- New Entry button (only for today) -->
+                <div v-if="selectedDate === todayStr" class="flex justify-center pt-1">
+                    <Button size="sm" class="gap-1.5 bg-violet-600 hover:bg-violet-700"
+                        @click="router.get('/notes/new')">
+                        <Plus class="h-3.5 w-3.5" />
+                        Add Another Entry
+                    </Button>
+                </div>
             </div>
         </DialogContent>
     </Dialog>
+
+    <!-- ─ Edit Dialog ───────────────────────────────────────── -->
+    <Dialog v-model:open="showEdit">
+        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle class="font-serif italic text-zinc-700 dark:text-zinc-300">Edit Entry</DialogTitle>
+            </DialogHeader>
+            <form @submit.prevent="submitEdit" class="flex flex-col gap-4">
+                <div>
+                    <Label for="planner-edit-title">Title</Label>
+                    <Input id="planner-edit-title" v-model="editForm.title" class="mt-1" required />
+                    <p v-if="editForm.errors.title" class="mt-1 text-xs text-red-500">{{ editForm.errors.title }}</p>
+                </div>
+                <!-- Mood -->
+                <div>
+                    <Label class="mb-1.5 block">Mood</Label>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="m in moodOptions"
+                            :key="m.value"
+                            type="button"
+                            class="rounded-xl px-3 py-1.5 text-sm transition-all"
+                            :class="editForm.mood === m.value
+                                ? 'bg-violet-600 text-white shadow'
+                                : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300'"
+                            @click="editForm.mood = editForm.mood === m.value ? null : m.value"
+                        >{{ m.emoji }} {{ m.label }}</button>
+                    </div>
+                </div>
+                <!-- Color -->
+                <div>
+                    <Label class="mb-1.5 block">Color</Label>
+                    <div class="flex gap-2">
+                        <button
+                            v-for="c in colorOptions"
+                            :key="c.value"
+                            type="button"
+                            class="h-6 w-6 rounded-full border-2 transition-all"
+                            :class="[c.bg, editForm.color === c.value ? 'border-violet-500 scale-110' : 'border-transparent']"
+                            @click="editForm.color = c.value"
+                        />
+                    </div>
+                </div>
+                <!-- Content -->
+                <div>
+                    <Label class="mb-1.5 block">Content</Label>
+                    <TiptapEditor v-model="editForm.content" />
+                    <p v-if="editForm.errors.content" class="mt-1 text-xs text-red-500">{{ editForm.errors.content }}</p>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" @click="showEdit = false">Cancel</Button>
+                    <Button type="submit" :disabled="editForm.processing" class="bg-violet-600 hover:bg-violet-700">
+                        {{ editForm.processing ? 'Saving…' : 'Save Changes' }}
+                    </Button>
+                </div>
+            </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─ Delete Confirmation ───────────────────────────────── -->
+    <AlertDialog v-model:open="showDelete">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to delete "<strong>{{ deletingTitle }}</strong>"? This cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="confirmDelete">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>
