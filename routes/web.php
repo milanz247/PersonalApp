@@ -11,6 +11,7 @@ use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransferController;
+use App\Http\Controllers\ForexJournalController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -80,6 +81,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('notes/{note}', [NoteController::class, 'update'])->name('notes.update');
     Route::post('notes/{note}/pin', [NoteController::class, 'togglePin'])->name('notes.pin');
     Route::delete('notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
+
+    // Forex Journal
+    Route::get('forex', [ForexJournalController::class, 'dashboard'])->name('forex.dashboard');
+    Route::get('forex/journal', [ForexJournalController::class, 'journal'])->name('forex.journal');
+    Route::get('forex/analytics', [ForexJournalController::class, 'analytics'])->name('forex.analytics');
+    Route::get('forex/settings', [ForexJournalController::class, 'settings'])->name('forex.settings');
 });
 
 require __DIR__.'/settings.php';

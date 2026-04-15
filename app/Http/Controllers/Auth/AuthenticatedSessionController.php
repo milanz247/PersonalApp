@@ -19,7 +19,7 @@ class AuthenticatedSessionController extends Controller
     public function create(Request $request): Response
     {
         // Allow specific modules to request a post-login redirect via ?redirect_to=
-        $allowed = ['notes' => 'notes.index', 'dashboard' => 'dashboard'];
+        $allowed = ['notes' => 'notes.index', 'dashboard' => 'dashboard', 'forex' => 'forex.dashboard'];
         $key = $request->query('redirect_to');
         if ($key && isset($allowed[$key])) {
             session()->put('url.intended', route($allowed[$key]));

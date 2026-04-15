@@ -90,6 +90,16 @@ const pillars = [
         bgBg: 'bg-violet-100/50 dark:bg-violet-900/30',
         route: 'notes.index',
         loginRedirect: 'notes',
+    },
+    {
+        id: 'forex',
+        title: 'Forex Journal',
+        description: 'Document your forex trading journey. Log trades, reflect on sessions, and track your growth as a trader.',
+        icon: TrendingUp,
+        colorUrl: 'text-emerald-600 dark:text-emerald-400',
+        bgBg: 'bg-emerald-100/50 dark:bg-emerald-900/30',
+        route: 'forex.dashboard',
+        loginRedirect: 'forex',
     }
 ];
 </script>
@@ -145,7 +155,7 @@ const pillars = [
                 </p>
             </div>
 
-            <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 
                 <div
                     v-for="pillar in pillars"
