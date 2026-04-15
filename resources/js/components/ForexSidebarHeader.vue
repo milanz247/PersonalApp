@@ -8,56 +8,40 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { BreadcrumbItemType, SharedData } from '@/types';
+import type { BreadcrumbItemType } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LogOut } from 'lucide-vue-next';
+import { LogOut, Globe } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { useDateTime } from '@/composables/useDateTime';
 
 defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
 }>();
 
-const page = usePage<SharedData>();
+const page = usePage<any>();
 
-// ── User name ─────────────────────────────────────────────────────
+// ── User info ──────────────────────────────────────────────────────
 const firstName = computed(() => {
     const name = page.props.auth?.user?.name ?? 'Milan';
     return name.split(' ')[0];
 });
 
-// ── Live clock (matches Finance Tracker pattern exactly) ───────────
-function formatCurrentDate(format: string): string {
-    const now  = new Date();
-    const d    = String(now.getDate()).padStart(2, '0');
-    const mo   = String(now.getMonth() + 1).padStart(2, '0');
-    const y    = String(now.getFullYear());
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    switch (format) {
-        case 'DD/MM/YYYY':   return `${d}/${mo}/${y}`;
-        case 'MM/DD/YYYY':   return `${mo}/${d}/${y}`;
-        case 'YYYY-MM-DD':   return `${y}-${mo}-${d}`;
-        case 'DD-MM-YYYY':   return `${d}-${mo}-${y}`;
-        case 'YYYY/MM/DD':   return `${y}/${mo}/${d}`;
-        case 'MMM DD, YYYY': return `${months[now.getMonth()]} ${d}, ${y}`;
-        default:             return `${d}/${mo}/${y}`;
-    }
-}
+// ── Timezone-aware live clock ──────────────────────────────────────
+const { userTimezone, formatNowDate, formatNowTime } = useDateTime();
 
-const dateFormat  = page.props.userSettings?.date_format ?? 'DD/MM/YYYY';
-const currentDate = ref(formatCurrentDate(dateFormat));
-const currentTime = ref(
-    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-);
+const currentDate = ref('');
+const currentTime = ref('');
 
 let clockTimer: ReturnType<typeof setInterval>;
 
+function updateClock() {
+    currentDate.value = formatNowDate();        // respects user's date_format & timezone
+    currentTime.value = formatNowTime(true);    // 12-hour clock in user's timezone
+}
+
 onMounted(() => {
-    clockTimer = setInterval(() => {
-        currentDate.value = formatCurrentDate(dateFormat);
-        currentTime.value = new Date().toLocaleTimeString([], {
-            hour: '2-digit', minute: '2-digit', second: '2-digit',
-        });
-    }, 1000);
+    updateClock();
+    clockTimer = setInterval(updateClock, 1000);
 });
 
 onUnmounted(() => clearInterval(clockTimer));
@@ -89,7 +73,7 @@ onUnmounted(() => clearInterval(clockTimer));
             </template>
         </div>
 
-        <!-- Right: Welcome + live clock + logout -->
+        <!-- Right: Welcome + timezone clock + logout -->
         <div class="flex items-center gap-4">
 
             <!-- Welcome text -->
@@ -97,13 +81,20 @@ onUnmounted(() => clearInterval(clockTimer));
                 Welcome, <span class="font-semibold text-foreground">{{ firstName }}</span> 👋
             </span>
 
-            <!-- Live date/time (matches Finance Tracker exactly) -->
+            <!-- Live timezone clock -->
             <div class="hidden flex-col items-end gap-0.5 md:flex">
+                <!-- Timezone label -->
+                <span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 dark:text-emerald-400">
+                    <Globe class="h-2.5 w-2.5" />
+                    {{ userTimezone }}
+                </span>
+                <!-- Date in user's format + timezone -->
                 <span class="text-muted-foreground text-xs">{{ currentDate }}</span>
+                <!-- Time in user's timezone -->
                 <span class="font-mono text-sm tabular-nums leading-none">{{ currentTime }}</span>
             </div>
 
-            <!-- Logout icon button (matches Finance Tracker) -->
+            <!-- Logout icon (matches Finance Tracker) -->
             <Link
                 method="post"
                 :href="route('logout')"

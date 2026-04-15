@@ -9,6 +9,7 @@ import type { BreadcrumbItemType, SharedData } from '@/types';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { LogOut, MinusCircle } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useDateTime } from '@/composables/useDateTime';
 
 defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
@@ -16,36 +17,22 @@ defineProps<{
 
 const page = usePage<SharedData>();
 
-// ─── Live clock ───────────────────────────────────────────────────────────────
+// ── Timezone-aware live clock (uses user's saved timezone) ────────
+const { formatNowDate, formatNowTime } = useDateTime();
 
-function formatCurrentDate(format: string): string {
-    const now = new Date();
-    const d   = String(now.getDate()).padStart(2, '0');
-    const mo  = String(now.getMonth() + 1).padStart(2, '0');
-    const y   = String(now.getFullYear());
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    switch (format) {
-        case 'DD/MM/YYYY':   return `${d}/${mo}/${y}`;
-        case 'MM/DD/YYYY':   return `${mo}/${d}/${y}`;
-        case 'YYYY-MM-DD':   return `${y}-${mo}-${d}`;
-        case 'DD-MM-YYYY':   return `${d}-${mo}-${y}`;
-        case 'YYYY/MM/DD':   return `${y}/${mo}/${d}`;
-        case 'MMM DD, YYYY': return `${months[now.getMonth()]} ${d}, ${y}`;
-        default:             return `${d}/${mo}/${y}`;
-    }
-}
-
-const dateFormat  = page.props.userSettings?.date_format ?? 'DD/MM/YYYY';
-const currentDate = ref(formatCurrentDate(dateFormat));
-const currentTime = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+const currentDate = ref('');
+const currentTime = ref('');
 
 let clockTimer: ReturnType<typeof setInterval>;
 
+function updateClock() {
+    currentDate.value = formatNowDate();
+    currentTime.value = formatNowTime(false); // 24-hour for Finance Tracker
+}
+
 onMounted(() => {
-    clockTimer = setInterval(() => {
-        currentDate.value = formatCurrentDate(dateFormat);
-        currentTime.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }, 1000);
+    updateClock();
+    clockTimer = setInterval(updateClock, 1000);
 });
 
 onUnmounted(() => clearInterval(clockTimer));

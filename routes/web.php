@@ -85,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Forex Journal
     Route::get('forex', [ForexJournalController::class, 'dashboard'])->name('forex.dashboard');
     Route::get('forex/journal', [ForexJournalController::class, 'journal'])->name('forex.journal');
+    Route::get('forex/calendar', [ForexJournalController::class, 'calendar'])->name('forex.calendar');
     Route::get('forex/analytics', [ForexJournalController::class, 'analytics'])->name('forex.analytics');
     Route::get('forex/settings', [ForexJournalController::class, 'settings'])->name('forex.settings');
 });

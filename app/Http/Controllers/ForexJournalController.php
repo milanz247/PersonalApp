@@ -17,6 +17,14 @@ class ForexJournalController extends Controller
     }
 
     /**
+     * Economic Calendar page.
+     */
+    public function calendar(): Response
+    {
+        return Inertia::render('Forex/EconomicCalendar');
+    }
+
+    /**
      * Placeholder for the journal listing page (future).
      */
     public function journal(): Response
