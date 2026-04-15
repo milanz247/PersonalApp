@@ -21,9 +21,9 @@ import { type NavItem } from '@/types';
 
 const forexNavItems: NavItem[] = [
     { title: 'Dashboard',          href: '/forex',           icon: LayoutGrid    },
-    { title: 'Journal',            href: '/forex/journal',   icon: BookMarked    },
+    // { title: 'Journal',            href: '/forex/journal',   icon: BookMarked    },
     { title: 'Economic Calendar',  href: '/forex/calendar',  icon: CalendarClock },
-    { title: 'Analytics',          href: '/forex/analytics', icon: BarChart2     },
+    // { title: 'Analytics',          href: '/forex/analytics', icon: BarChart2     },
     { title: 'Settings',           href: '/forex/settings',  icon: Settings      },
 ];
 </script>
