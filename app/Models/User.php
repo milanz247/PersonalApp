@@ -33,6 +33,8 @@ class User extends Authenticatable
         'debt_reminder_days_before',
         'debt_initial_message',
         'debt_reminder_message',
+        'google2fa_secret',
+        'google2fa_enabled',
     ];
 
     /**
@@ -45,6 +47,7 @@ class User extends Authenticatable
         'remember_token',
         'debt_initial_message',
         'debt_reminder_message',
+        'google2fa_secret',
     ];
 
     /**
